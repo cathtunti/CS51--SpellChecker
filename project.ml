@@ -63,7 +63,7 @@ sig
 
   (* Same as search, but take in string list to search multiple strings at the
      same time. *)
-  val multiple_search : string list -> tree -> (string * d) list list 
+  val multiple_search : string list -> tree -> string list list 
 
   (* Print out results of multiple_search in a readable format *)
   val print_result : string list -> tree -> unit 
@@ -260,9 +260,16 @@ struct
     | Empty -> false
     | Branch b -> search_br word b
 
-  let multiple_search wlst t = raise ImplementMe
 
-  let print_result lst = raise ImplementMe
+
+  let rec multiple_search (w_lst: string list) (tree: tree) : string list list = 
+    match w_lst with
+    | [] -> []
+    | hd::tl -> (search hd tree) :: (multiple_search tl tree)
+
+
+
+  let print_result (input_lst: string list) (tree: tree) : unit = raise ImplementMe
 
   let rec insert (word: string) (tree: tree) : tree = 
     let rec add_to_branch (word: string) (br: branch) : branch = 
