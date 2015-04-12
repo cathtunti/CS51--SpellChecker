@@ -338,10 +338,10 @@ struct
     let t = insert w11 t in
     let d9_11 = D.distance w9 w11 in
     assert (t = Branch(Mult(d0, w4, [Mult(d45, w5, [Mult(d56, w6, [Single(d67, w7); Single(d68, w8)])]); 
-                                     Mult(d49, w9, [Single(d9_10, w10); Single(d9-11, w11)])])));
+                                     Mult(d49, w9, [Single(d9_10, w10); Single(d9_11, w11)])])));
     ()
 
-  let test_is_member () = raise ImplementMe 
+  let test_is_member () = raise ImplementMe
   
   let test_search () = raise ImplementMe
 
