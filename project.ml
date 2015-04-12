@@ -203,7 +203,6 @@ struct
           let s = String.filter ~f:(fun c -> (c >= 'a' && c <= 'z')) hd in
   *)
 
-  let rec search word t = 
 
   (********************)
   (* Helper Functions *)
