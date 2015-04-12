@@ -216,33 +216,34 @@ struct
     | Single (d,_) -> d
     | Mult (d,_,_) -> d
 
+
   (***********************)
   (* Interface Functions *)
   (***********************)
 
   let search (word: string) (tree: tree) : string list = 
-    let rec search_br (word: string) (br: branch) (return_lst: string list ) : string list = 
+    let rec search_br (word: string) (br: branch) : string list = 
       let rec search_br_lst (word: string) (d_ori : d) (b_lst: branch list) (return_lst: string list ) : string list =
         match b_lst with
-        | [] -> []
+        | [] -> return_lst
         | hd::tl -> 
             if (D.in_range d_ori (extract_d hd)) 
-            then search_br word hd return_lst @ (search_br_lst word d_ori tl return_lst)
+            then search_br word hd  @ (search_br_lst word d_ori tl return_lst)
             else (search_br_lst word d_ori tl return_lst)
       in
       match br with
       | Single (d, w) -> 
           (* if within tolerance range then add to list *)
-          if D.is_similar (D.distance word w) then w::return_lst
-          else return_lst
+          if D.is_similar (D.distance word w) then [w]
+          else []
       | Mult (d, w, b_lst) -> 
           if D.is_similar (D.distance word w) 
-          then w::(search_br_lst word (D.distance w word) b_lst return_lst) 
-          else (search_br_lst word (D.distance w word) b_lst return_lst)
+          then (search_br_lst word (D.distance w word) b_lst [w]) 
+          else (search_br_lst word (D.distance w word) b_lst [])
     in
     match tree with
     | Empty -> [] 
-    | Branch b -> D.sort word (search_br word b [])
+    | Branch b -> D.sort word (search_br word b)
 
 
 
@@ -305,8 +306,9 @@ struct
     assert (t = Branch(Mult(d0, w1, [Mult(d12, w2, [Single(d23, w3)])])));
     ()
 
-
-  let test_is_member () = raise ImplementMe
+  let test_is_member () = raise ImplementMe 
+  
+  let test_search () = raise ImplementMe
 
   let run_tests () = 
     test_insert ();
