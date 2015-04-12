@@ -131,12 +131,21 @@ struct
           let s = String.filter ~f:(fun c -> (c >= 'a' && c <= 'z')) hd in
   *)
 
-  let search word t = raise ImplementMe
+  let rec search word t =
+  (*
+    match t with
+    |Leaf -> []
+    |Branch(l,d,s,r) -> 
+        if word = s then (word * d) :: search  else
+            if (D.distance word s) > (D.distance _ _) && 
+               (D.distance _ _) - 1 <= d && d <= (D.distance _ _ ) then search word l
+            if (D.distance _ _) - 1 < (D.distance _ _) + 1 then search word r
+  *)
 
   let rec is_member word t = 
     match t with
     | Leaf -> false
-    | Branch(l, d, s, r) -> 
+    | Branch(l, _, s, r) -> 
         if word = s then true
         else (is_member word l) || (is_member word r)
 
