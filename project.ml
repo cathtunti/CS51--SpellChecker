@@ -2,8 +2,7 @@ open Core.Std
 
 exception ImplementMe
 
-type path = Left | Right 
-
+type order = Equal | Less | Greater
 (* signature for edit distance *)
 module type DISTANCE = 
 sig
@@ -17,11 +16,18 @@ sig
   (* Zero distance *)
   val zero : d
 
-  (* Return Left if d1 is closer to d2 than d3. Otherwise, return Right *)
-  val closer_path : d -> d -> d -> path
+  val is_similar : d -> bool
+
+  (* *)
+  val in_range : d -> d -> bool
+
+  val compare : d -> d -> order
+
+  val sort : string -> string list -> string list
 
   (* Tests for functions in this module *)
   val run_tests : unit 
+
 
 end
 
@@ -50,7 +56,7 @@ sig
 
   (* Search a BKtree for the given word. Return a list of tuples of the closest 
      word and the distance between them. *)
-  val search : string -> tree -> (string * d) list
+  val search : string -> tree -> string list
 
   (* returns true if word is the BKtree, false otherwise *)
   val is_member : string -> tree -> bool
@@ -62,11 +68,8 @@ sig
   (* Print out results of multiple_search in a readable format *)
   val print_result : string list -> tree -> unit 
 
-  (* Delete the given word from a BKtree. May raise NodeNotFound exception. *)
-  val delete : string -> tree -> tree
-
   (* Tests for functions in this module *)
-  val run_tests : unit
+  val run_tests : unit -> unit
 
 end
 
@@ -76,15 +79,17 @@ struct
   
   type d = int
 
-  let distance s1 s2 =
+  let tolerance = 1
+
+  let distance (s1:string) (s2:string) : d =
     let (s1, s2) = (String.lowercase s1, String.lowercase s2) in
     let (len1, len2) = (String.length s1, String.length s2) in 
     let rec get_distance (p1:int) (p2:int) : int =
-      if p1 = len1 then len2 - p2 else if p2 = len2  then len1 - p1
-      else 
-        let (c1, c2) = (String.get s1 p1, String.get s2 p2) in
-        if c1 = c2 then get_distance (p1 + 1) (p2 + 1)
-        else 1 + min (get_distance (p1 + 1) (p2 + 1)) (min 
+      if p1 = len1 then len2 - p2 
+      else if p2 = len2 then len1 - p1
+      else let (c1, c2) = (String.get s1 p1, String.get s2 p2) in
+           if c1 = c2 then get_distance (p1 + 1) (p2 + 1)
+           else 1 + min (get_distance (p1 + 1) (p2 + 1)) (min 
                   (get_distance (p1 + 1) p2) (get_distance p1 (p2 + 1))) in
     if len1 = 0 then len2 
     else if len2 = 0 then len1
@@ -92,12 +97,24 @@ struct
 
   let zero = 0
 
-  let closer_path d1 d2 d3 =
-    if abs(d1 - d2) < abs(d1 - d3) then Left else Right 
+  let is_similar (d:d) : bool =
+    d <= tolerance
+
+  let in_range (d1:d) (d2:d) : bool =
+    abs(d1 - d2) <= tolerance
+
+  let compare (d1:d) (d2:d) : order =
+    if d1 = d2 then Equal 
+    else if d1 > d2 then Greater
+    else Less
+
+  let sort (search:string) (wlst:string list) : string list = 
+    List.sort ~cmp:(fun x y -> (distance search x) - (distance search y)) wlst
 
   let run_tests =
     assert((distance "evidence" "providence") = 3);
     assert((distance "evidence" "provident") = 5);
+    assert((distance "evidence" "provoident") = 6);
     assert((distance "cook" "snook") = 2);
     assert((distance "" "") = 0);
     assert((distance "CS51" "CS51") = 0);
@@ -106,6 +123,60 @@ struct
 
 end
 
+module DynamicLevDistance : DISTANCE with type d=int = 
+struct
+
+  type d = int
+  let tolerance = 1
+
+  let distance (s1:string) (s2:string) : int = 
+    let (s1, s2) = (String.lowercase s1, String.lowercase s2) in
+    let (len1, len2) = (String.length s1, String.length s2) in
+    let rec get_distance (col:int) (row:int) (prev_row:int array) 
+      (current_row:int array) : int = 
+      let (c1, c2) = (String.get s1 (row - 1), String.get s2 (col - 1)) in
+      let (del, sub, ins) = (Array.get current_row (col - 1), 
+            Array.get prev_row (col - 1), Array.get prev_row col) in
+      let d = min del (min sub ins) in
+      let d' = if c1 <> c2 then 1 + d else d in
+      if col = len2 && row = len1 then d'
+      else
+        (Array.set current_row col d';
+        if col = len2 then get_distance 1 (row + 1) current_row 
+                              (Array.create ~len:(len2 + 1) (row + 1))
+        else get_distance (col + 1) row prev_row current_row) in
+    if len1 = 0 then len2 
+    else if len2 = 0 then len1
+    else get_distance 1 1 (Array.init (len2 + 1) (fun i -> i)) 
+                        (Array.create ~len:(len2 + 1) 1)
+
+  let zero = 0
+
+  let is_similar (d:d) : bool =
+    d <= tolerance
+
+  let in_range (d1:d) (d2:d) : bool =
+    abs(d1 - d2) <= 1
+
+  let compare (d1: d) (d2: d) : order =
+    if d1 = d2 then Equal 
+    else if d1 > d2 then Greater
+    else Less
+
+  let sort (search:string) (wlst:string list) : string list = 
+    List.sort ~cmp:(fun x y -> (distance search x) - (distance search y)) wlst
+
+  let run_tests =
+    assert((distance "evidence" "providence") = 3);
+    assert((distance "evidence" "provident") = 5);
+    assert((distance "evidence" "provoident") = 6);
+    assert((distance "cook" "snook") = 2);
+    assert((distance "" "") = 0);
+    assert((distance "CS51" "CS51") = 0);
+    assert((distance "cool" "Cool") = 0);
+    ()
+
+end 
 
 
 (* implementation for BKtree *)
@@ -116,10 +187,11 @@ struct
   exception NodeNotFound
 
   type d = D.d
-  type tree = Leaf | Branch of tree * d * string * tree
+  type branch = Single of d * string | Mult of (d * string * branch list)
+  type tree = Empty | Branch of branch
 
   (* Returns an empty BKtree *)
-  let empty = Leaf
+  let empty = Empty
 
   let load_dict filename = raise ImplementMe
   (*
@@ -132,61 +204,125 @@ struct
   *)
 
   let rec search word t =
-  (*
-    match t with
-    |Leaf -> []
-    |Branch(l,d,s,r) -> 
-        if word = s then (word * d) :: search  else
-            if (D.distance word s) > (D.distance _ _) && 
-               (D.distance _ _) - 1 <= d && d <= (D.distance _ _ ) then search word l
-            if (D.distance _ _) - 1 < (D.distance _ _) + 1 then search word r
-  *)
 
-  let rec is_member word t = 
-    match t with
-    | Leaf -> false
-    | Branch(l, _, s, r) -> 
-        if word = s then true
-        else (is_member word l) || (is_member word r)
+  (********************)
+  (* Helper Functions *)
+  (********************)
+
+  let same_word (w1: string) (w2:string) : bool = ((D.distance w1 w2) = D.zero)
+
+  let extract_d (branch: branch) : d =
+    match branch with
+    | Single (d,_) -> d
+    | Mult (d,_,_) -> d
+
+  (***********************)
+  (* Interface Functions *)
+  (***********************)
+
+  let search (word: string) (tree: tree) : string list = 
+    let rec search_br (word: string) (br: branch) (return_lst: string list ) : string list = 
+      let rec search_br_lst (word: string) (d_ori : d) (b_lst: branch list) (return_lst: string list ) : string list =
+        match b_lst with
+        | [] -> []
+        | hd::tl -> 
+            if (D.in_range d_ori (extract_d hd)) 
+            then search_br word hd return_lst @ (search_br_lst word d_ori tl return_lst)
+            else (search_br_lst word d_ori tl return_lst)
+      in
+      match br with
+      | Single (d, w) -> 
+          (* if within tolerance range then add to list *)
+          if D.is_similar (D.distance word w) then w::return_lst
+          else return_lst
+      | Mult (d, w, b_lst) -> 
+          if D.is_similar (D.distance word w) 
+          then w::(search_br_lst word (D.distance w word) b_lst return_lst) 
+          else (search_br_lst word (D.distance w word) b_lst return_lst)
+    in
+    match tree with
+    | Empty -> [] 
+    | Branch b -> D.sort word (search_br word b [])
+
+
+
+  let rec is_member (word: string) (tree: tree) : bool = 
+    let rec search_br (word: string) (br: branch) : bool =
+      let rec search_br_lst (word: string) b_lst : bool =
+        match b_lst with
+        | [] -> false
+        | hd::tl -> (search_br word hd) || search_br_lst word tl in
+      match br with
+      | Single (_, w) -> (word = w)
+      | Mult (_, w, b_lst) -> (word = w) || search_br_lst word b_lst in
+    match tree with
+    | Empty -> false
+    | Branch b -> search_br word b
 
   let multiple_search wlst t = raise ImplementMe
 
   let print_result lst = raise ImplementMe
 
-  let rec insert word t = 
-    if is_member word t then t else 
-    match t with
-    | Leaf -> Branch(empty, D.zero, word, empty)
-    | Branch(l, d, s, r) -> 
-        let d' = D.distance word s in
-        match (l, r) with
-        | (Leaf, _) -> Branch(Branch(empty, d', word, empty), d, s, r)
-        | (_, Leaf) -> Branch(l, d, s, Branch(empty, d', word, empty))
-        | (Branch(_, dl, _, _), Branch(_, dr, _, _)) -> 
-            match (D.closer_path d' dl dr) with
-            | Left -> Branch(insert word l, d, s, r)
-            | Right -> Branch(l, d, s, insert word r)
+  let rec insert (word: string) (tree: tree) : tree = 
+    let rec add_to_branch (word: string) (br: branch) : branch = 
+      let rec inject_to_lst (word: string) (d1: d) (b_lst: branch list) : branch list =
+                match b_lst with
+                | [] -> [Single(d1, word)]
+                | [hd] -> (match D.compare d1 (extract_d hd) with
+                           | Equal -> [add_to_branch word hd]
+                           | Less -> (inject_to_lst word d1 []) @ [hd]
+                           | Greater -> hd::(inject_to_lst word d1 []))
+                | hd::tl -> (match D.compare d1 (extract_d hd) with
+                             | Equal -> (add_to_branch word hd)::tl
+                             | Less -> (inject_to_lst word d1 []) @ hd::tl
+                             | Greater -> hd::(inject_to_lst word d1 tl)) in
+      match br with
+      | Single (d, s) -> 
+          if (same_word s word) then br 
+          else Mult (d, s, [Single ((D.distance s word), word)]) 
+      | Mult (d, s, b_lst) -> 
+          (* if we found the same word, then return as is *)
+          if (same_word s word) then br 
+          (* else look through its children (list) *)
+          else (* let d1 = D.distance s word in *) Mult (d, s, (inject_to_lst word (D.distance s word) b_lst)) in
+    match tree with
+    | Empty -> Branch (Single (D.zero, word))
+    | Branch b -> Branch (add_to_branch word b)
             
+  (***********************)
+  (*        Test         *)
+  (***********************)
+  let test_insert () = 
+    let (w1,w2,w3) = ("book", "books", "boo") in
+    let t = insert w1 empty in
+    let d0 = D.zero in
+    assert (t = Branch(Single(d0, w1)));
+    let t = insert w2 t in
+    let d12 = D.distance w1 w2 in 
+    assert (t = Branch(Mult(d0, w1, [Single(d12, w2)])));
+    let t = insert w3 t in
+    let d23 = D.distance w2 w3 in 
+    assert (t = Branch(Mult(d0, w1, [Mult(d12, w2, [Single(d23, w3)])])));
+    ()
 
-  let delete word t = raise ImplementMe
 
-  let run_tests = 
-      ()
+  let test_is_member () = raise ImplementMe
+
+  let run_tests () = 
+    test_insert ();
+    ()
 
 
 end
 
 let _ = NaiveLevDistance.run_tests
+let _ = DynamicLevDistance.run_tests
 
 
-(* implementation for Levenshtein Distance using dynamic programming concept 
-module DynamicLevDistance : DISTANCE with type num=int =
-struct
-  type num = int
-  let distance s1 s2 = pseudo code below
-  let compare d1 d2 = raise ImplementMe
-end
-*)
+module BKTree = (BKtree(DynamicLevDistance) : BKTREE with type d = DynamicLevDistance.d)
+
+let _ = BKTree.run_tests
+
 
 (* implementation for Damerau–Levenshtein distance using dynamic programming 
 module DamerauLevDistance : DISTANCE with type num=int =
