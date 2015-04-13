@@ -205,10 +205,9 @@ struct
   (* Interface Functions *)
   (***********************)
   
-  (* tolerance +1 for every 3 chars *)
-  let find_tole (word: string) : int = 
-    let len = String.length word in
-    if len <= 5 then 1 else len/3   
+  (* tolerance +1 for every 5 chars *)
+  let find_tole (word: string) : int = (String.length word) / 6 + 1 
+      
 
   let search (word: string) (tree: tree) : string list = 
     let tole = find_tole word in
@@ -485,7 +484,7 @@ module BKTree =
 
 let _ = BKTree.run_tests
 
-let dict = BKTree.load_dict "../data/dict2.txt"
+let dict = BKTree.load_dict "../data/cleaned_dict.txt"
 
 try
   while true do
