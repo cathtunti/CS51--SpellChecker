@@ -1,4 +1,5 @@
 open Core.Std
+open Str
 
 exception ImplementMe
 
@@ -65,7 +66,7 @@ sig
      same time. *)
   val multiple_search : string list -> tree -> string list list 
 
-  (* Print out results of multiple_search in a readable format *)
+  (* Print out results of search in a readable format *)
   val print_result : string -> tree -> unit 
 
   (* Print out results of multiple_search in a readable format *)
@@ -363,7 +364,7 @@ struct
     match tree with
     | Empty -> Branch (Single (D.zero, word))
     | Branch b -> Branch (add_to_branch word b)
-
+  
   let load_dict (filename:string) : tree = 
     let rec load_str_list (lst: string list) (t:tree) : tree =
       match lst with
@@ -425,7 +426,31 @@ struct
         Mult(d49, w9, [Single(d9_10, w10); Single(d9_11, w11)])])));
     ()
 
-  let test_is_member () = raise ImplementMe
+  let test_is_member () =
+    let (w4, w5, w6, w7, w8, w9, w10, w11) = 
+      ("book", "books", "boo", "boon", "cook", "cake", "cape", "cart") in
+    let d0 = D.zero in
+    let d45 = D.distance w4 w5 in
+    let d56 = D.distance w5 w6 in
+    let d67 = D.distance w6 w7 in
+    let d68 = D.distance w6 w8 in
+    let d49 = D.distance w4 w9 in
+    let d9_10 = D.distance w9 w10 in
+    let d9_11 = D.distance w9 w11 in
+    let t =  Branch(Mult(d0, w4, 
+      [Mult(d45, w5, [Mult(d56, w6, [Single(d67, w7); Single(d68, w8)])]); 
+        Mult(d49, w9, [Single(d9_10, w10); Single(d9_11, w11)])])) in
+    assert (is_member "book" t);
+    assert (not(is_member "bore" t));
+    assert (is_member "books" t);
+    assert (is_member "boo" t);
+    assert (is_member "boon" t);
+    assert (is_member "cook" t);
+    assert (is_member "cake" t);
+    assert (is_member "cape" t);
+    assert (is_member "cart" t);
+    assert (not(is_member "carts" t));
+    ()
   
   let test_search () = 
     let (w4, w5, w6, w7, w8, w9, w10, w11) = 
