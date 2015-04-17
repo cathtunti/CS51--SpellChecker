@@ -24,7 +24,7 @@ sig
   (* Compare two distances *)
   val compare : d -> d -> order
 
-  (* Return Left if d1 is closer to d2 than d3. Otherwise, retrurn Right *)
+  (* Return Left if d1 is closer to d2 than d3. Otherwise, return Right *)
   val closer_path : d -> d -> d -> path
 
 end
