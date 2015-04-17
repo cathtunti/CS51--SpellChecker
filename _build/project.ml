@@ -5,6 +5,31 @@ exception ImplementMe
 type order = Eq | Lt | Gt
 type path = Left | Right 
 
+(* signature for edit distance *)
+module type DISTANCE = 
+sig
+
+  (* Type of distance *)
+  type d
+
+  (* Return distance between words *)
+  val distance : string -> string -> d
+
+  (* Zero distance *)
+  val zero : d
+
+  (* Return true if two strings are the same, false otherwise*)
+  val is_same : string -> string -> bool
+
+  (* Compare two distances *)
+  val compare : d -> d -> order
+
+  (* Return Left if d1 is closer to d2 than d3. Otherwise, retrurn Right *)
+  val closer_path : d -> d -> d -> path
+
+end
+
+
 (* signature for BKtree *)
 module type BKTREE =
 sig
@@ -48,30 +73,57 @@ sig
 
 end
 
+(* implementation for Levenshtein Disance with brute force approach *)
+module NaiveLevDistance : DISTANCE with type d=int = 
+struct
+  
+  type d = int
 
-(* signature for edit distance *)
-module type DISTANCE = 
-sig
+  let distance s1 s2 =
+    let (s1, s2) = (String.lowercase s1, String.lowercase s2) in
+    let (len1, len2) = (String.length s1, String.length s2) in 
+    let rec get_distance (p1:int) (p2:int) : int =
+      if p1 = len1 then len2 - p2 else if p2 = len2  then len1 - p1
+      else 
+        let (c1, c2) = (String.get s1 p1, String.get s2 p2) in
+        if c1 = c2 then get_distance (p1 + 1) (p2 + 1)
+        else 1 + min (get_distance (p1 + 1) (p2 + 1)) (min 
+                  (get_distance (p1 + 1) p2) (get_distance p1 (p2 + 1))) in
+    if len1 = 0 then len2 
+    else if len2 = 0 then len1
+    else get_distance 0 0
 
-  (* Type of distance *)
-  type d
+  let zero = distance "" ""
 
-  (* Return distance between words *)
-  val distance : string -> string -> d
+  let compare d1 d2 = 
+    if d1 = d2 then Eq
+    else if d1 < d2 then Lt
+    else Gt 
 
-  (* Zero distance *)
-  val zero : d
+  let is_same s1 s2 =
+    match (compare (distance s1 s2) zero) with
+    | Eq -> true
+    | _ -> false 
 
-  (* Return true if two strings are the same, false otherwise*)
-  val is_same : string -> string -> bool
+  let closer_path d1 d2 d3 =
+    if abs(d1 - d2) < abs(d1 - d3) then Left
+    else Right 
 
-  (* Compare two distances *)
-  val compare : d -> d -> order
-
-  (* Return Left if d1 is closer to d2 than d3. Otherwise, retrurn Right *)
-  val closer_path : d -> d -> d -> path
 
 end
+
+
+let test_lev_distance f =
+  assert((f "evidence" "providence") = 3);
+  assert((f "evidence" "provident") = 5);
+  assert((f "cook" "snook") = 2);
+  assert((f "" "") = 0);
+  assert((f "CS51" "CS51") = 0);
+  assert((f "cool" "Cool") = 0);
+  ()
+
+let _ = test_lev_distance NaiveLevDistance.distance
+
 
 (* signature for BKtree *)
 module BKtree(D:DISTANCE) : BKTREE with type d=D.d =
@@ -126,60 +178,13 @@ struct
 
   let delete word t = raise ImplementMe
 
-  let run_tests = ()
-
-end
-
-(* implementation for Levenshtein Disance with brute force approach *)
-module NaiveLevDistance : DISTANCE with type d=int = 
-struct
-  
-  type d = int
-
-  let distance s1 s2 =
-    let (s1, s2) = (String.lowercase s1, String.lowercase s2) in
-    let (len1, len2) = (String.length s1, String.length s2) in 
-    let rec get_distance (p1:int) (p2:int) : int =
-      if p1 = len1 then len2 - p2 else if p2 = len2  then len1 - p1
-      else 
-        let (c1, c2) = (String.get s1 p1, String.get s2 p2) in
-        if c1 = c2 then get_distance (p1 + 1) (p2 + 1)
-        else 1 + min (get_distance (p1 + 1) (p2 + 1)) (min 
-                  (get_distance (p1 + 1) p2) (get_distance p1 (p2 + 1))) in
-    if len1 = 0 then len2 
-    else if len2 = 0 then len1
-    else get_distance 0 0
-
-  let zero = distance "" ""
-
-  let compare d1 d2 = 
-    if d1 = d2 then Eq
-    else if d1 < d2 then Lt
-    else Gt 
-
-  let is_same s1 s2 =
-    match (compare (distance s1 s2) zero) with
-    | Eq -> true
-    | _ -> false 
-
-  let closer_path d1 d2 d3 =
-    if abs(d1 - d2) < abs(d1 - d3) then Left
-    else Right 
+  let run_tests = 
+      ()
 
 
 end
 
 
-let test_lev_distance f =
-  assert((f "evidence" "providence") = 3);
-  assert((f "evidence" "provident") = 5);
-  assert((f "cook" "snook") = 2);
-  assert((f "" "") = 0);
-  assert((f "CS51" "CS51") = 0);
-  assert((f "cool" "Cool") = 0);
-  ()
-
-let _ = test_lev_distance NaiveLevDistance.distance
 
 (* implementation for Levenshtein Distance using dynamic programming concept 
 module DynamicLevDistance : DISTANCE with type num=int =
