@@ -125,7 +125,7 @@ let test_lev_distance f =
 let _ = test_lev_distance NaiveLevDistance.distance
 
 
-(* signature for BKtree *)
+(* implementation for BKtree *)
 module BKtree(D:DISTANCE) : BKTREE with type d=D.d =
 struct
 
