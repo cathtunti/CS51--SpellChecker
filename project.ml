@@ -2,7 +2,6 @@ open Core.Std
 
 exception ImplementMe
 
-type order = Eq | Lt | Gt
 type path = Left | Right 
 
 (* signature for edit distance *)
@@ -17,12 +16,6 @@ sig
 
   (* Zero distance *)
   val zero : d
-
-  (* Return true if two strings are the same, false otherwise*)
-  val is_same : string -> string -> bool
-
-  (* Compare two distances *)
-  val compare : d -> d -> order
 
   (* Return Left if d1 is closer to d2 than d3. Otherwise, return Right *)
   val closer_path : d -> d -> d -> path
@@ -93,21 +86,10 @@ struct
     else if len2 = 0 then len1
     else get_distance 0 0
 
-  let zero = distance "" ""
-
-  let compare d1 d2 = 
-    if d1 = d2 then Eq
-    else if d1 < d2 then Lt
-    else Gt 
-
-  let is_same s1 s2 =
-    match (compare (distance s1 s2) zero) with
-    | Eq -> true
-    | _ -> false 
+  let zero = 0
 
   let closer_path d1 d2 d3 =
-    if abs(d1 - d2) < abs(d1 - d3) then Left
-    else Right 
+    if abs(d1 - d2) < abs(d1 - d3) then Left else Right 
 
 
 end
@@ -154,7 +136,7 @@ struct
     match t with
     | Leaf -> false
     | Branch(l, d, s, r) -> 
-        if D.is_same word s then true
+        if word = s then true
         else (is_member word l) || (is_member word r)
 
   let multiple_search wlst t = raise ImplementMe
