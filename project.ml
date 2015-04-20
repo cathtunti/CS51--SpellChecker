@@ -20,6 +20,9 @@ sig
   (* Return Left if d1 is closer to d2 than d3. Otherwise, return Right *)
   val closer_path : d -> d -> d -> path
 
+  (* Tests for functions in this module *)
+  val run_tests : unit 
+
 end
 
 
@@ -62,6 +65,7 @@ sig
   (* Delete the given word from a BKtree. May raise NodeNotFound exception. *)
   val delete : string -> tree -> tree
 
+  (* Tests for functions in this module *)
   val run_tests : unit
 
 end
@@ -91,20 +95,17 @@ struct
   let closer_path d1 d2 d3 =
     if abs(d1 - d2) < abs(d1 - d3) then Left else Right 
 
+  let run_tests =
+    assert((distance "evidence" "providence") = 3);
+    assert((distance "evidence" "provident") = 5);
+    assert((distance "cook" "snook") = 2);
+    assert((distance "" "") = 0);
+    assert((distance "CS51" "CS51") = 0);
+    assert((distance "cool" "Cool") = 0);
+    ()
 
 end
 
-
-let test_lev_distance f =
-  assert((f "evidence" "providence") = 3);
-  assert((f "evidence" "provident") = 5);
-  assert((f "cook" "snook") = 2);
-  assert((f "" "") = 0);
-  assert((f "CS51" "CS51") = 0);
-  assert((f "cool" "Cool") = 0);
-  ()
-
-let _ = test_lev_distance NaiveLevDistance.distance
 
 
 (* implementation for BKtree *)
@@ -166,6 +167,7 @@ struct
 
 end
 
+let _ = NaiveLevDistance.run_tests
 
 
 (* implementation for Levenshtein Distance using dynamic programming concept 
