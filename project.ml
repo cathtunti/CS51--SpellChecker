@@ -112,7 +112,7 @@ struct
 
   type d = int
 
-  let distance s1 s2 = 
+  let distance (s1:string) (s2:string) : d = 
     let (s1, s2) = (String.lowercase s1, String.lowercase s2) in
     let (len1, len2) = (String.length s1, String.length s2) in
     let rec get_distance (col:int) (row:int) (prev_row:int array) 
@@ -246,14 +246,16 @@ struct
   (*        Test         *)
   (***********************)
   let test_insert () = 
-    let t = insert "book" empty in
-    assert (t = Branch(Single(D.zero, "book")));
-    let t1 = insert "books" t in
-    assert (t1 = Branch(Mult(D.zero, "book", [Single((D.distance "book" "books"), "books" )])));
-    let t2 = insert "boo" t1 in
-    assert (t2 = Branch(Mult(D.zero, "book", 
-                  [Mult((D.distance "book" "books"), "books", 
-                    [Single((D.distance "books" "boo"), "boo")] )])));
+    let (w1,w2,w3) = ("book", "books", "boo") in
+    let t = insert w1 empty in
+    let d0 = D.zero in
+    assert (t = Branch(Single(d0, w1)));
+    let t = insert w2 t in
+    let d12 = D.distance w1 w2 in 
+    assert (t = Branch(Mult(d0, w1, [Single(d12, w2)])));
+    let t = insert w3 t in
+    let d23 = D.distance w2 w3 in 
+    assert (t = Branch(Mult(d0, w1, [Mult(d12, w2, [Single(d23, w3)])])));
     ()
 
 
@@ -269,9 +271,7 @@ let _ = NaiveLevDistance.run_tests
 let _ = DynamicLevDistance.run_tests
 
 
-
-
-module BKTree = (BKtree(NaiveLevDistance) : BKTREE with type d = NaiveLevDistance.d)
+module BKTree = (BKtree(DynamicLevDistance) : BKTREE with type d = DynamicLevDistance.d)
 
 let _ = BKTree.run_tests
 
