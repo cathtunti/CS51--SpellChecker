@@ -54,7 +54,7 @@ sig
 
   (* Search a BKtree for the given word. Return a list of tuples of the closest 
      word and the distance between them. *)
-  val search : string -> tree -> (string * d) list
+  val search : string -> tree -> string list
 
   (* returns true if word is the BKtree, false otherwise *)
   val is_member : string -> tree -> bool
@@ -209,30 +209,27 @@ struct
   (* Interface Functions *)
   (***********************)
 
-  let search (word: string) (tree: tree) : (string * d) list = 
-    let tolerance = 1 in
-    let rec search_br (word: string) (br: branch) (return_lst: (string * d) list ) : (string * d) list = 
-      let rec search_br_lst (word: strng) (d_ori : d) (b_lst: branch list) : (string * d) list =
-        let in_range (d_ori: d) (d_child: d): bool =
-          if (d_ori = 0) then (d <= d_ori + 1)
-          else ((d_ori - 1) >= d ) && (d <= (d_ori + 1)) in
+  let search (word: string) (tree: tree) : string list = 
+    let rec search_br (word: string) (br: branch) (return_lst: string list ) : string list = 
+      let rec search_br_lst (word: string) (d_ori : d) (b_lst: branch list) : string list =
         match b_lst with
         | [] ->
-        | hd::tl -> if (in_range d_ori (extract_d hd)) then search_br hd
+        | hd::tl -> if (D.in_range d_ori (extract_d hd)) then search_br hd
 
       in
       match br with
       | Single (d, w) -> 
           (* if within tolerance range then add to list *)
-          if (D.distance word w) <= tolerance then [(d, w)]
-          else []  (* to the next one in list *)
+          if D.is_similar (D.distance word w) then w::return_lst
+          else return_lst  (* to the next one in list *)
       | Mult (d, w, b_lst) -> 
           if (D.distance word w) <= tolerance then (d, w)::return_lst
           else search_br_lst word (D.distance w word )b_lst
     in
     match tree with
-    | Empty -> []
+    | Empty -> [] 
     | Branch b -> search_br b
+
 
 
   let rec is_member (word: string) (tree: tree) : bool = 
