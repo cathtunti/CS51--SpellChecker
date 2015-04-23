@@ -223,18 +223,19 @@ struct
     let rec search_br (word: string) (br: branch) (return_lst: string list ) : string list = 
       let rec search_br_lst (word: string) (d_ori : d) (b_lst: branch list) : string list =
         match b_lst with
-        | [] ->
-        | hd::tl -> if (D.in_range d_ori (extract_d hd)) then search_br hd
+        | [] -> []
+        | hd::tl -> 
+            if (D.in_range d_ori (extract_d hd)) then search_br hd @ (search_br_lst word d_ori tl)
 
       in
       match br with
       | Single (d, w) -> 
           (* if within tolerance range then add to list *)
           if D.is_similar (D.distance word w) then w::return_lst
-          else return_lst  (* to the next one in list *)
+          else return_lst
       | Mult (d, w, b_lst) -> 
-          if (D.distance word w) <= tolerance then (d, w)::return_lst
-          else search_br_lst word (D.distance w word )b_lst
+          if D.is_similar (D.distance word w) then w::return_lst
+          else (search_br_lst word (D.distance w word) b_lst) @ return_lst
     in
     match tree with
     | Empty -> [] 
