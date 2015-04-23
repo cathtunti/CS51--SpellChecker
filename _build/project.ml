@@ -3,7 +3,7 @@ open Core.Std
 exception ImplementMe
 
 type path = Left | Right 
-type order = Eqaul | Less | Greater
+type order = Equal | Less | Greater
 (* signature for edit distance *)
 module type DISTANCE = 
 sig
@@ -116,10 +116,11 @@ struct
   exception NodeNotFound
 
   type d = D.d
-  type tree = Leaf | Branch of tree * d * string * tree
+  type branch = Single of d * string | Mult of (d * string * branch list)
+  type tree = Empty | Branch of branch
 
   (* Returns an empty BKtree *)
-  let empty = Leaf
+  let empty = Empty
 
   let load_dict filename = raise ImplementMe
   (*
@@ -130,36 +131,67 @@ struct
       | hd::tl -> 
           let s = String.filter ~f:(fun c -> (c >= 'a' && c <= 'z')) hd in
   *)
+  (********************)
+  (* Helper Functions *)
+  (********************)
+
+  let same_word (w1: string) (w2:string) : bool = ((D.distance w1 w2) = D.zero)
+
+  let extract_d (branch: branch) : d =
+    match branch with
+    | Single (d,_) -> d
+    | Mult (d,_,_) -> d
+
+  let compare_dist (d1: d) (d2: d) : order =
+    if (d1 = d2) then Equal else if (d1 > d2) then Greater
+    else Less
+
+  (***********************)
+  (* Interface Functions *)
+  (***********************)
 
   let search word t = raise ImplementMe
 
-  let rec is_member word t = 
-    match t with
+  let rec is_member word t = raise ImplementMe
+(*     match t with
     | Leaf -> false
     | Branch(l, d, s, r) -> 
         if word = s then true
-        else (is_member word l) || (is_member word r)
+        else (is_member word l) || (is_member word r) *)
 
   let multiple_search wlst t = raise ImplementMe
 
   let print_result lst = raise ImplementMe
 
-  let rec insert word t = 
-    if is_member word t then t else 
-    match t with
-    | Leaf -> Branch(empty, D.zero, word, empty)
-    | Branch(l, d, s, r) -> 
-        let d' = D.distance word s in
-        match (l, r) with
-        | (Leaf, _) -> Branch(Branch(empty, d', word, empty), d, s, r)
-        | (_, Leaf) -> Branch(l, d, s, Branch(empty, d', word, empty))
-        | (Branch(_, dl, _, _), Branch(_, dr, _, _)) -> 
-            match (D.closer_path d' dl dr) with
-            | Left -> Branch(insert word l, d, s, r)
-            | Right -> Branch(l, d, s, insert word r)
+  let rec insert (word: string) (tree: tree) : tree = 
+    let rec add_to_branch (word: string) (br: branch) : branch = 
+      let rec inject_to_lst (word: string) (d1: d) (b_lst: branch list) : branch list =
+                match b_lst with
+                | [] -> [Single(d1, word)]
+                | [hd] -> (match compare_dist d1 (extract_d hd) with
+                           | Equal -> [add_to_branch word hd]
+                           | Less -> (inject_to_lst word d1 []) @ [hd]
+                           | Greater -> hd::(inject_to_lst word d1 []))
+                | hd::tl -> (match compare_dist d1 (extract_d hd) with
+                             | Equal -> (add_to_branch word hd)::tl
+                             | Less -> (inject_to_lst word d1 []) @ hd::tl
+                             | Greater -> hd::(inject_to_lst word d1 tl)) in
+      match br with
+      | Single (d, s) -> 
+          if (same_word s word) then br (* Single (d, s) *)
+          else Mult (d, s, [Single ((D.distance s word), word)]) 
+      | Mult (d, s, b_lst) -> 
+          (* if we found the same word, then return as is *)
+          if (same_word s word) then br (* Mult (d, s, b_lst) *)
+          (* else look through its children (list) *)
+          else (* let d1 = D.distance s word in *) Mult (d, s, (inject_to_lst word (D.distance s word) b_lst)) in
+    match tree with
+    | Empty -> Branch (Single (D.zero, word))
+    | Branch b -> Branch (add_to_branch word b)
             
 
   let delete word t = raise ImplementMe
+
 
   let run_tests = 
       ()
