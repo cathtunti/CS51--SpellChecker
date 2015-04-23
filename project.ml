@@ -108,7 +108,8 @@ struct
     else if d1 > d2 then Greater
     else Less
 
-  let sort (search:string) (wlist:string list) : string list = raise ImplementMe
+  let sort (search:string) (wlst:string list) : string list = 
+    List.sort ~cmp:(fun x y -> (distance search x) - (distance search y)) wlst
 
   let run_tests =
     assert((distance "evidence" "providence") = 3);
@@ -162,7 +163,8 @@ struct
     else if d1 > d2 then Greater
     else Less
 
-  let sort (search:string) (wlist:string list) = raise ImplementMe
+  let sort (search:string) (wlst:string list) : string list = 
+    List.sort ~cmp:(fun x y -> (distance search x) - (distance search y)) wlst
 
   let run_tests =
     assert((distance "evidence" "providence") = 3);
