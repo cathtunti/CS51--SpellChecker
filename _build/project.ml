@@ -62,9 +62,6 @@ sig
   (* Print out results of multiple_search in a readable format *)
   val print_result : string list -> tree -> unit 
 
-  (* Delete the given word from a BKtree. May raise NodeNotFound exception. *)
-  val delete : string -> tree -> tree
-
   (* Tests for functions in this module *)
   val run_tests : unit -> unit
 
@@ -174,6 +171,7 @@ struct
       | hd::tl -> 
           let s = String.filter ~f:(fun c -> (c >= 'a' && c <= 'z')) hd in
   *)
+
   (********************)
   (* Helper Functions *)
   (********************)
@@ -194,9 +192,10 @@ struct
   (* Interface Functions *)
   (***********************)
 
-  let search word t = raise ImplementMe
+  let search (typed: string) (tree: tree) : (string * d) list = 
+    raise ImplementMe
 
-  let rec is_member (word: string) (tree: tree) : bool = (* ((insert word tree) = tree) *)
+  let rec is_member (word: string) (tree: tree) : bool = 
     let rec search_br (word: string) (br: branch) : bool =
       let rec search_br_lst (word: string) b_lst : bool =
         match b_lst with
@@ -208,6 +207,7 @@ struct
     match tree with
     | Empty -> false
     | Branch b -> search_br word b
+
 
   let multiple_search wlst t = raise ImplementMe
 
@@ -228,20 +228,17 @@ struct
                              | Greater -> hd::(inject_to_lst word d1 tl)) in
       match br with
       | Single (d, s) -> 
-          if (same_word s word) then br (* Single (d, s) *)
+          if (same_word s word) then br 
           else Mult (d, s, [Single ((D.distance s word), word)]) 
       | Mult (d, s, b_lst) -> 
           (* if we found the same word, then return as is *)
-          if (same_word s word) then br (* Mult (d, s, b_lst) *)
+          if (same_word s word) then br 
           (* else look through its children (list) *)
           else (* let d1 = D.distance s word in *) Mult (d, s, (inject_to_lst word (D.distance s word) b_lst)) in
     match tree with
     | Empty -> Branch (Single (D.zero, word))
     | Branch b -> Branch (add_to_branch word b)
             
-
-  let delete word t = raise ImplementMe
-
   (***********************)
   (*        Test         *)
   (***********************)
@@ -259,6 +256,7 @@ struct
     ()
 
 
+  let test_is_member () = raise ImplementMe
 
   let run_tests () = 
     test_insert ();
