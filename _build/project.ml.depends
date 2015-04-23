@@ -1,1 +1,1 @@
-project.ml: Core String
+project.ml: Array Core String

@@ -80,11 +80,11 @@ struct
     let (s1, s2) = (String.lowercase s1, String.lowercase s2) in
     let (len1, len2) = (String.length s1, String.length s2) in 
     let rec get_distance (p1:int) (p2:int) : int =
-      if p1 = len1 then len2 - p2 else if p2 = len2  then len1 - p1
-      else 
-        let (c1, c2) = (String.get s1 p1, String.get s2 p2) in
-        if c1 = c2 then get_distance (p1 + 1) (p2 + 1)
-        else 1 + min (get_distance (p1 + 1) (p2 + 1)) (min 
+      if p1 = len1 then len2 - p2 
+      else if p2 = len2 then len1 - p1
+      else let (c1, c2) = (String.get s1 p1, String.get s2 p2) in
+           if c1 = c2 then get_distance (p1 + 1) (p2 + 1)
+           else 1 + min (get_distance (p1 + 1) (p2 + 1)) (min 
                   (get_distance (p1 + 1) p2) (get_distance p1 (p2 + 1))) in
     if len1 = 0 then len2 
     else if len2 = 0 then len1
@@ -98,6 +98,7 @@ struct
   let run_tests =
     assert((distance "evidence" "providence") = 3);
     assert((distance "evidence" "provident") = 5);
+    assert((distance "evidence" "provoident") = 6);
     assert((distance "cook" "snook") = 2);
     assert((distance "" "") = 0);
     assert((distance "CS51" "CS51") = 0);
@@ -106,10 +107,48 @@ struct
 
 end
 
+module DynamicLevDistance : DISTANCE with type d=int = 
+struct
 
+  type d = int
 
+  let distance s1 s2 = 
+    let (s1, s2) = (String.lowercase s1, String.lowercase s2) in
+    let (len1, len2) = (String.length s1, String.length s2) in
+    let rec get_distance (col:int) (row:int) (prev_row:int array) 
+      (current_row:int array) : int = 
+      let (c1, c2) = (String.get s1 (row - 1), String.get s2 (col - 1)) in
+      let (del, sub, ins) = (Array.get current_row (col - 1), 
+            Array.get prev_row (col - 1), Array.get prev_row col) in
+      let d = min del (min sub ins) in
+      let d' = if c1 <> c2 then 1 + d else d in
+      if col = len2 && row = len1 then d'
+      else
+        (Array.set current_row col d';
+        if col = len2 then get_distance 1 (row + 1) current_row 
+                              (Array.create ~len:(len2 + 1) (row + 1))
+        else get_distance (col + 1) row prev_row current_row) in
+    if len1 = 0 then len2 
+    else if len2 = 0 then len1
+    else get_distance 1 1 (Array.init (len2 + 1) (fun i -> i)) 
+                        (Array.create ~len:(len2 + 1) 1)
 
-let _ = NaiveLevDistance.run_tests
+  let zero = 0
+
+  let closer_path d1 d2 d3 =
+    if abs(d1 - d2) < abs(d1 - d3) then Left else Right 
+
+  let run_tests =
+    assert((distance "evidence" "providence") = 3);
+    assert((distance "evidence" "provident") = 5);
+    assert((distance "evidence" "provoident") = 6);
+    assert((distance "cook" "snook") = 2);
+    assert((distance "" "") = 0);
+    assert((distance "CS51" "CS51") = 0);
+    assert((distance "cool" "Cool") = 0);
+    ()
+
+end 
 
 
 (* implementation for BKtree *)
@@ -171,16 +210,13 @@ struct
 
 end
 
+let _ = NaiveLevDistance.run_tests
+let _ = DynamicLevDistance.run_tests
 
 
-(* implementation for Levenshtein Distance using dynamic programming concept 
-module DynamicLevDistance : DISTANCE with type num=int =
-struct
-  type num = int
-  let distance s1 s2 = pseudo code below
-  let compare d1 d2 = raise ImplementMe
-end
-*)
+
+
+
 
 (* implementation for Damerau–Levenshtein distance using dynamic programming 
 module DamerauLevDistance : DISTANCE with type num=int =
