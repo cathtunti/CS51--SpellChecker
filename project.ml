@@ -66,7 +66,7 @@ sig
   val delete : string -> tree -> tree
 
   (* Tests for functions in this module *)
-  val run_tests : unit
+  val run_tests : unit -> unit
 
 end
 
@@ -146,18 +146,25 @@ struct
     if (d1 = d2) then Equal else if (d1 > d2) then Greater
     else Less
 
+
   (***********************)
   (* Interface Functions *)
   (***********************)
 
   let search word t = raise ImplementMe
 
-  let rec is_member word t = raise ImplementMe
-(*     match t with
-    | Leaf -> false
-    | Branch(l, d, s, r) -> 
-        if word = s then true
-        else (is_member word l) || (is_member word r) *)
+  let rec is_member (word: string) (tree: tree) : bool = (* ((insert word tree) = tree) *)
+    let rec search_br (word: string) (br: branch) : bool =
+      let rec search_br_lst (word: string) b_lst : bool =
+        match b_lst with
+        | [] -> false
+        | hd::tl -> (search_br word hd) || search_br_lst word tl in
+      match br with
+      | Single (_, w) -> (word = w)
+      | Mult (_, w, b_lst) -> (word = w) || search_br_lst word b_lst in
+    match tree with
+    | Empty -> false
+    | Branch b -> search_br word b
 
   let multiple_search wlst t = raise ImplementMe
 
@@ -192,15 +199,34 @@ struct
 
   let delete word t = raise ImplementMe
 
+  (***********************)
+  (*        Test         *)
+  (***********************)
+  let test_insert () = 
+    let t = insert "book" empty in
+    assert (t = Branch(Single(D.zero, "book")));
+    let t1 = insert "books" t in
+    assert (t1 = Branch(Mult(D.zero, "book", [Single((D.distance "book" "books"), "books" )])));
+    let t2 = insert "boo" t1 in
+    assert (t2 = Branch(Mult(D.zero, "book", 
+                  [Mult((D.distance "book" "books"), "books", 
+                    [Single((D.distance "books" "boo"), "boo")] )])));
+    ()
 
-  let run_tests = 
-      ()
+
+
+  let run_tests () = 
+    test_insert ();
+    ()
 
 
 end
 
 let _ = NaiveLevDistance.run_tests
 
+module BKTree = (BKtree(NaiveLevDistance) : BKTREE with type d = NaiveLevDistance.d)
+
+let _ = BKTree.run_tests
 
 (* implementation for Levenshtein Distance using dynamic programming concept 
 module DynamicLevDistance : DISTANCE with type num=int =
