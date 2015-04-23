@@ -3,7 +3,7 @@ open Core.Std
 exception ImplementMe
 
 type path = Left | Right 
-
+type order = Eqaul | Less | Greater
 (* signature for edit distance *)
 module type DISTANCE = 
 sig
@@ -108,10 +108,6 @@ end
 
 
 
-
-let _ = NaiveLevDistance.run_tests
-
-
 (* implementation for BKtree *)
 module BKtree(D:DISTANCE) : BKTREE with type d=D.d =
 struct
@@ -171,6 +167,7 @@ struct
 
 end
 
+let _ = NaiveLevDistance.run_tests
 
 
 (* implementation for Levenshtein Distance using dynamic programming concept 

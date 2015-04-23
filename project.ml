@@ -3,7 +3,7 @@ open Core.Std
 exception ImplementMe
 
 type path = Left | Right 
-
+type order = Eqaul | Less | Greater
 (* signature for edit distance *)
 module type DISTANCE = 
 sig
