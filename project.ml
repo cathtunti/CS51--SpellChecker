@@ -128,7 +128,7 @@ struct
   type d = int
   let tolerance = 1
 
-  let distance (s1:string) (s2:string) : d = 
+  let distance (s1:string) (s2:string) : int = 
     let (s1, s2) = (String.lowercase s1, String.lowercase s2) in
     let (len1, len2) = (String.length s1, String.length s2) in
     let rec get_distance (col:int) (row:int) (prev_row:int array) 
