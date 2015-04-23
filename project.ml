@@ -16,6 +16,8 @@ sig
   (* Zero distance *)
   val zero : d
 
+  val is_similar : d -> bool
+
   (* *)
   val in_range : d -> d -> bool
 
@@ -77,7 +79,9 @@ struct
   
   type d = int
 
-  let distance s1 s2 =
+  let tolerance = 1
+
+  let distance (s1:string) (s2:string) : d =
     let (s1, s2) = (String.lowercase s1, String.lowercase s2) in
     let (len1, len2) = (String.length s1, String.length s2) in 
     let rec get_distance (p1:int) (p2:int) : int =
@@ -93,16 +97,18 @@ struct
 
   let zero = 0
 
+  let is_similar (d:d) : bool =
+    d <= tolerance
+
   let in_range (d1:d) (d2:d) : bool =
-    abs(d1 - d2) <= 1
+    abs(d1 - d2) <= tolerance
 
   let compare (d1:d) (d2:d) : order =
     if d1 = d2 then Equal 
     else if d1 > d2 then Greater
     else Less
 
-  let sort (search:string) (wlist:string list) = raise ImplementMe
-
+  let sort (search:string) (wlist:string list) : string list = raise ImplementMe
 
   let run_tests =
     assert((distance "evidence" "providence") = 3);
@@ -120,6 +126,7 @@ module DynamicLevDistance : DISTANCE with type d=int =
 struct
 
   type d = int
+  let tolerance = 1
 
   let distance (s1:string) (s2:string) : d = 
     let (s1, s2) = (String.lowercase s1, String.lowercase s2) in
@@ -143,6 +150,9 @@ struct
                         (Array.create ~len:(len2 + 1) 1)
 
   let zero = 0
+
+  let is_similar (d:d) : bool =
+    d <= tolerance
 
   let in_range (d1:d) (d2:d) : bool =
     abs(d1 - d2) <= 1
