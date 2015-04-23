@@ -66,9 +66,6 @@ sig
   (* Print out results of multiple_search in a readable format *)
   val print_result : string list -> tree -> unit 
 
-  (* Delete the given word from a BKtree. May raise NodeNotFound exception. *)
-  val delete : string -> tree -> tree
-
   (* Tests for functions in this module *)
   val run_tests : unit -> unit
 
@@ -124,7 +121,7 @@ struct
 
   type d = int
 
-  let distance s1 s2 = 
+  let distance (s1:string) (s2:string) : d = 
     let (s1, s2) = (String.lowercase s1, String.lowercase s2) in
     let (len1, len2) = (String.length s1, String.length s2) in
     let rec get_distance (col:int) (row:int) (prev_row:int array) 
@@ -193,6 +190,7 @@ struct
       | hd::tl -> 
           let s = String.filter ~f:(fun c -> (c >= 'a' && c <= 'z')) hd in
   *)
+
   (********************)
   (* Helper Functions *)
   (********************)
@@ -211,9 +209,10 @@ struct
   (* Interface Functions *)
   (***********************)
 
-  let search word t = raise ImplementMe
+  let search (typed: string) (tree: tree) : (string * d) list = 
+    raise ImplementMe
 
-  let rec is_member (word: string) (tree: tree) : bool = (* ((insert word tree) = tree) *)
+  let rec is_member (word: string) (tree: tree) : bool = 
     let rec search_br (word: string) (br: branch) : bool =
       let rec search_br_lst (word: string) b_lst : bool =
         match b_lst with
@@ -225,6 +224,7 @@ struct
     match tree with
     | Empty -> false
     | Branch b -> search_br word b
+
 
   let multiple_search wlst t = raise ImplementMe
 
@@ -245,35 +245,35 @@ struct
                              | Greater -> hd::(inject_to_lst word d1 tl)) in
       match br with
       | Single (d, s) -> 
-          if (same_word s word) then br (* Single (d, s) *)
+          if (same_word s word) then br 
           else Mult (d, s, [Single ((D.distance s word), word)]) 
       | Mult (d, s, b_lst) -> 
           (* if we found the same word, then return as is *)
-          if (same_word s word) then br (* Mult (d, s, b_lst) *)
+          if (same_word s word) then br 
           (* else look through its children (list) *)
           else (* let d1 = D.distance s word in *) Mult (d, s, (inject_to_lst word (D.distance s word) b_lst)) in
     match tree with
     | Empty -> Branch (Single (D.zero, word))
     | Branch b -> Branch (add_to_branch word b)
             
-
-  let delete word t = raise ImplementMe
-
   (***********************)
   (*        Test         *)
   (***********************)
   let test_insert () = 
-    let t = insert "book" empty in
-    assert (t = Branch(Single(D.zero, "book")));
-    let t1 = insert "books" t in
-    assert (t1 = Branch(Mult(D.zero, "book", [Single((D.distance "book" "books"), "books" )])));
-    let t2 = insert "boo" t1 in
-    assert (t2 = Branch(Mult(D.zero, "book", 
-                  [Mult((D.distance "book" "books"), "books", 
-                    [Single((D.distance "books" "boo"), "boo")] )])));
+    let (w1,w2,w3) = ("book", "books", "boo") in
+    let t = insert w1 empty in
+    let d0 = D.zero in
+    assert (t = Branch(Single(d0, w1)));
+    let t = insert w2 t in
+    let d12 = D.distance w1 w2 in 
+    assert (t = Branch(Mult(d0, w1, [Single(d12, w2)])));
+    let t = insert w3 t in
+    let d23 = D.distance w2 w3 in 
+    assert (t = Branch(Mult(d0, w1, [Mult(d12, w2, [Single(d23, w3)])])));
     ()
 
 
+  let test_is_member () = raise ImplementMe
 
   let run_tests () = 
     test_insert ();
@@ -286,9 +286,7 @@ let _ = NaiveLevDistance.run_tests
 let _ = DynamicLevDistance.run_tests
 
 
-
-
-module BKTree = (BKtree(NaiveLevDistance) : BKTREE with type d = NaiveLevDistance.d)
+module BKTree = (BKtree(DynamicLevDistance) : BKTREE with type d = DynamicLevDistance.d)
 
 let _ = BKTree.run_tests
 
