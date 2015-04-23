@@ -2,7 +2,6 @@ open Core.Std
 
 exception ImplementMe
 
-type path = Left | Right 
 type order = Equal | Less | Greater
 (* signature for edit distance *)
 module type DISTANCE = 
@@ -17,11 +16,16 @@ sig
   (* Zero distance *)
   val zero : d
 
-  (* Return Left if d1 is closer to d2 than d3. Otherwise, return Right *)
-  val closer_path : d -> d -> d -> path
+  (* *)
+  val in_range : d -> d -> bool
+
+  val compare : d -> d -> order
+
+  val sort : string -> string list -> string list
 
   (* Tests for functions in this module *)
   val run_tests : unit 
+
 
 end
 
@@ -89,8 +93,16 @@ struct
 
   let zero = 0
 
-  let closer_path d1 d2 d3 =
-    if abs(d1 - d2) < abs(d1 - d3) then Left else Right 
+  let in_range (d1:d) (d2:d) : bool =
+    abs(d1 - d2) <= 1
+
+  let compare (d1:d) (d2:d) : order =
+    if d1 = d2 then Equal 
+    else if d1 > d2 then Greater
+    else Less
+
+  let sort (search:string) (wlist:string list) = raise ImplementMe
+
 
   let run_tests =
     assert((distance "evidence" "providence") = 3);
@@ -132,8 +144,15 @@ struct
 
   let zero = 0
 
-  let closer_path d1 d2 d3 =
-    if abs(d1 - d2) < abs(d1 - d3) then Left else Right 
+  let in_range (d1:d) (d2:d) : bool =
+    abs(d1 - d2) <= 1
+
+  let compare (d1: d) (d2: d) : order =
+    if d1 = d2 then Equal 
+    else if d1 > d2 then Greater
+    else Less
+
+  let sort (search:string) (wlist:string list) = raise ImplementMe
 
   let run_tests =
     assert((distance "evidence" "providence") = 3);
@@ -183,9 +202,7 @@ struct
     | Single (d,_) -> d
     | Mult (d,_,_) -> d
 
-  let compare_dist (d1: d) (d2: d) : order =
-    if (d1 = d2) then Equal else if (d1 > d2) then Greater
-    else Less
+
 
 
   (***********************)
@@ -241,11 +258,11 @@ struct
       let rec inject_to_lst (word: string) (d1: d) (b_lst: branch list) : branch list =
                 match b_lst with
                 | [] -> [Single(d1, word)]
-                | [hd] -> (match compare_dist d1 (extract_d hd) with
+                | [hd] -> (match D.compare d1 (extract_d hd) with
                            | Equal -> [add_to_branch word hd]
                            | Less -> (inject_to_lst word d1 []) @ [hd]
                            | Greater -> hd::(inject_to_lst word d1 []))
-                | hd::tl -> (match compare_dist d1 (extract_d hd) with
+                | hd::tl -> (match D.compare d1 (extract_d hd) with
                              | Equal -> (add_to_branch word hd)::tl
                              | Less -> (inject_to_lst word d1 []) @ hd::tl
                              | Greater -> hd::(inject_to_lst word d1 tl)) in
