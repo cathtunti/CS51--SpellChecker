@@ -84,7 +84,7 @@ struct
 
   let tolerance = 1
 
-  let distance (s1:string) (s2:string) : d =
+  let distance (s1: string) (s2: string) : d =
     let (s1, s2) = (String.lowercase s1, String.lowercase s2) in
     let (len1, len2) = (String.length s1, String.length s2) in 
     let rec get_distance (p1:int) (p2:int) : int =
@@ -100,18 +100,18 @@ struct
 
   let zero = 0
 
-  let is_similar (d:d) : bool =
+  let is_similar (d: d) : bool =
     d <= tolerance
 
-  let in_range (d1:d) (d2:d) : bool =
+  let in_range (d1: d) (d2: d) : bool =
     abs(d1 - d2) <= tolerance
 
-  let compare (d1:d) (d2:d) : order =
+  let compare (d1: d) (d2: d) : order =
     if d1 = d2 then Equal 
     else if d1 > d2 then Greater
     else Less
 
-  let sort (search:string) (wlst:string list) : string list = 
+  let sort (search: string) (wlst: string list) : string list = 
     List.sort ~cmp:(fun x y -> (distance search x) - (distance search y)) wlst
 
   let run_tests =
@@ -133,11 +133,11 @@ struct
   type d = int
   let tolerance = 1
 
-  let distance (s1:string) (s2:string) : int = 
+  let distance (s1: string) (s2: string) : int = 
     let (s1, s2) = (String.lowercase s1, String.lowercase s2) in
     let (len1, len2) = (String.length s1, String.length s2) in
     let rec get_distance (col:int) (row:int) (prev_row:int array) 
-      (current_row:int array) : int = 
+      (current_row: int array) : int = 
       let (c1, c2) = (String.get s1 (row - 1), String.get s2 (col - 1)) in
       let (del, sub, ins) = (Array.get current_row (col - 1), 
             Array.get prev_row (col - 1), Array.get prev_row col) in
@@ -156,10 +156,10 @@ struct
 
   let zero = 0
 
-  let is_similar (d:d) : bool =
+  let is_similar (d: d) : bool =
     d <= tolerance
 
-  let in_range (d1:d) (d2:d) : bool =
+  let in_range (d1: d) (d2: d) : bool =
     abs(d1 - d2) <= 1
 
   let compare (d1: d) (d2: d) : order =
@@ -203,7 +203,7 @@ struct
   (* Helper Functions *)
   (********************)
 
-  let same_word (w1: string) (w2:string) : bool = ((D.distance w1 w2) = D.zero)
+  let same_word (w1: string) (w2: string) : bool = ((D.distance w1 w2) = D.zero)
 
   let extract_d (branch: branch) : d =
     match branch with
@@ -216,7 +216,8 @@ struct
 
   let search (word: string) (tree: tree) : string list = 
     let rec search_br (word: string) (br: branch) : string list = 
-      let rec search_br_lst (word: string) (d_ori : d) (b_lst: branch list) (return_lst: string list ) : string list =
+      let rec search_br_lst (word: string) (d_ori: d) (b_lst: branch list) 
+        (return_lst: string list ) : string list =
         match b_lst with
         | [] -> return_lst
         | hd::tl -> 
@@ -278,7 +279,8 @@ struct
 
   let insert (word: string) (tree: tree) : tree = 
     let rec add_to_branch (word: string) (br: branch) : branch = 
-      let rec inject_to_lst (word: string) (d1: d) (b_lst: branch list) : branch list =
+      let rec inject_to_lst (word: string) (d1: d) (b_lst: branch list) 
+        : branch list =
         match b_lst with
         | [] -> [Single(d1, word)]
         | [hd] -> (match D.compare d1 (extract_d hd) with
@@ -324,7 +326,8 @@ struct
     let d23 = D.distance w2 w3 in 
     assert (t = Branch(Mult(d0, w1, [Mult(d12, w2, [Single(d23, w3)])])));
     
-    let (w4, w5, w6, w7, w8, w9, w10, w11) = ("book", "books", "boo", "boon", "cook", "cake", "cape", "cart") in
+    let (w4, w5, w6, w7, w8, w9, w10, w11) = 
+      ("book", "books", "boo", "boon", "cook", "cake", "cape", "cart") in
     let t = insert w4 empty in
     let d0 = D.zero in
     assert (t = Branch(Single(d0, w4)));
@@ -336,28 +339,34 @@ struct
     assert (t = Branch(Mult(d0, w4, [Mult(d45, w5, [Single(d56, w6)])])));
     let t = insert w7 t in
     let d67 = D.distance w6 w7 in
-    assert (t = Branch(Mult(d0, w4, [Mult(d45, w5, [Mult(d56, w6, [Single(d67, w7)])])])));
+    assert (t = Branch(Mult(d0, w4, 
+      [Mult(d45, w5, [Mult(d56, w6, [Single(d67, w7)])])])));
     let t = insert w8 t in
     let d68 = D.distance w6 w8 in
-    assert (t = Branch(Mult(d0, w4, [Mult(d45, w5, [Mult(d56, w6, [Single(d67, w7); Single(d68, w8)])])])));
+    assert (t = Branch(Mult(d0, w4, 
+      [Mult(d45, w5, [Mult(d56, w6, [Single(d67, w7); Single(d68, w8)])])])));
     let t = insert w9 t in
     let d49 = D.distance w4 w9 in
-    assert (t = Branch(Mult(d0, w4, [Mult(d45, w5, [Mult(d56, w6, [Single(d67, w7); Single(d68, w8)])]); 
-                                     Single(d49, w9)])));
+    assert (t = Branch(Mult(d0, w4, 
+      [Mult(d45, w5, [Mult(d56, w6, [Single(d67, w7); Single(d68, w8)])]); 
+                        Single(d49, w9)])));
     let t = insert w10 t in
     let d9_10 = D.distance w9 w10 in
-    assert (t = Branch(Mult(d0, w4, [Mult(d45, w5, [Mult(d56, w6, [Single(d67, w7); Single(d68, w8)])]);
-                                     Mult(d49, w9, [Single(d9_10, w10)])])));
+    assert (t = Branch(Mult(d0, w4, 
+      [Mult(d45, w5, [Mult(d56, w6, [Single(d67, w7); Single(d68, w8)])]);
+        Mult(d49, w9, [Single(d9_10, w10)])])));
     let t = insert w11 t in
     let d9_11 = D.distance w9 w11 in
-    assert (t = Branch(Mult(d0, w4, [Mult(d45, w5, [Mult(d56, w6, [Single(d67, w7); Single(d68, w8)])]); 
-                                     Mult(d49, w9, [Single(d9_10, w10); Single(d9_11, w11)])])));
+    assert (t = Branch(Mult(d0, w4, 
+      [Mult(d45, w5, [Mult(d56, w6, [Single(d67, w7); Single(d68, w8)])]); 
+        Mult(d49, w9, [Single(d9_10, w10); Single(d9_11, w11)])])));
     ()
 
   let test_is_member () = raise ImplementMe
   
   let test_search () = 
-    let (w4, w5, w6, w7, w8, w9, w10, w11) = ("book", "books", "boo", "boon", "cook", "cake", "cape", "cart") in
+    let (w4, w5, w6, w7, w8, w9, w10, w11) = 
+      ("book", "books", "boo", "boon", "cook", "cake", "cape", "cart") in
     let d0 = D.zero in
     let d45 = D.distance w4 w5 in
     let d56 = D.distance w5 w6 in
@@ -366,9 +375,11 @@ struct
     let d49 = D.distance w4 w9 in
     let d9_10 = D.distance w9 w10 in
     let d9_11 = D.distance w9 w11 in
-    let t =  Branch(Mult(d0, w4, [Mult(d45, w5, [Mult(d56, w6, [Single(d67, w7); Single(d68, w8)])]); 
-                                  Mult(d49, w9, [Single(d9_10, w10); Single(d9_11, w11)])])) in
-    let (s1, s2, s3, s4, s5) = ("caqe", "boop", "care", "supercalifragilisticexpialidocious", "barn") in
+    let t =  Branch(Mult(d0, w4, 
+      [Mult(d45, w5, [Mult(d56, w6, [Single(d67, w7); Single(d68, w8)])]); 
+        Mult(d49, w9, [Single(d9_10, w10); Single(d9_11, w11)])])) in
+    let (s1, s2, s3, s4, s5) = 
+      ("caqe", "boop", "care", "supercalifragilisticexpialidocious", "barn") in
     assert (search s1 t = ["cape"; "cake"]);
     assert (search s2 t = ["boon"; "boo"; "book"]);
     assert (search s3 t = ["cape"; "cake"]);
@@ -381,9 +392,11 @@ struct
     let d12_13 = D.distance w12 w13 in
     let d12_15 = D.distance w12 w15 in
     let d13_14 = D.distance w13 w14 in
-    let t = Branch(Mult(d0, w4, [Mult(d45, w5, [Mult(d56, w6, [Single(d67, w7); Single(d68, w8)])]); 
-                                 Mult(d49, w9, [Single(d9_10, w10); Single(d9_11, w11)]);
-                                 Mult(d4_12, w12, [Mult(d12_13, w13, [Single(d13_14, w14)]); Single(d12_15, w15)])])) in
+    let t = Branch(Mult(d0, w4, 
+      [Mult(d45, w5, [Mult(d56, w6, [Single(d67, w7); Single(d68, w8)])]); 
+        Mult(d49, w9, [Single(d9_10, w10); Single(d9_11, w11)]);
+          Mult(d4_12, w12, [Mult(d12_13, w13, 
+            [Single(d13_14, w14)]); Single(d12_15, w15)])])) in
     assert (search s6 t = ["form"]);
     ()
     
@@ -395,7 +408,8 @@ struct
     ()
     
   let test_extract_d () =
-    let (w4, w5, w6, w7, w8, w9, w10, w11) = ("book", "books", "boo", "boon", "cook", "cake", "cape", "cart") in
+    let (w4, w5, w6, w7, w8, w9, w10, w11) = 
+      ("book", "books", "boo", "boon", "cook", "cake", "cape", "cart") in
     let d0 = D.zero in
     let d45 = D.distance w4 w5 in
     let d56 = D.distance w5 w6 in
@@ -404,8 +418,9 @@ struct
     let d49 = D.distance w4 w9 in
     let d9_10 = D.distance w9 w10 in
     let d9_11 = D.distance w9 w11 in
-    let t = Mult(d0, w4, [Mult(d45, w5, [Mult(d56, w6, [Single(d67, w7); Single(d68, w8)])]); 
-                          Mult(d49, w9, [Single(d9_10, w10); Single(d9_11, w11)])]) in
+    let t = Mult(d0, w4, 
+      [Mult(d45, w5, [Mult(d56, w6, [Single(d67, w7); Single(d68, w8)])]); 
+        Mult(d49, w9, [Single(d9_10, w10); Single(d9_11, w11)])]) in
     let t2 = Single(d9_11, w11) in
     assert (extract_d t = d0);
     assert (extract_d t2 = d9_11);
@@ -425,7 +440,8 @@ let _ = NaiveLevDistance.run_tests
 let _ = DynamicLevDistance.run_tests
 
 
-module BKTree = (BKtree(DynamicLevDistance) : BKTREE with type d = DynamicLevDistance.d)
+module BKTree = 
+  (BKtree(DynamicLevDistance) : BKTREE with type d = DynamicLevDistance.d)
 
 let _ = BKTree.run_tests
 let dict = BKTree.load_dict "dict.txt"
