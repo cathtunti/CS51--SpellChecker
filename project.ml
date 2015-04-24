@@ -370,6 +370,12 @@ struct
 end
 *)
 
-
+let time_fun f = 
+  fun x -> 
+    let t0 = Unix.time() in 
+    let _ = f x in 
+    let t1 = Unix.time() in 
+      (t1 -. t0)
+;;
 
 
