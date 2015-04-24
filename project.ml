@@ -225,11 +225,11 @@ struct
             else (search_br_lst word d_ori tl return_lst) 
         in
       match br with
-      | Single (d, w) -> 
+      | Single (_, w) -> 
           (* if within tolerance range then add to list *)
           if D.is_similar (D.distance word w) then [w]
           else []
-      | Mult (d, w, b_lst) -> 
+      | Mult (_, w, b_lst) -> 
           if D.is_similar (D.distance word w) 
           then (search_br_lst word (D.distance w word) b_lst [w]) 
           else (search_br_lst word (D.distance w word) b_lst [])
