@@ -228,8 +228,8 @@ struct
         | hd::tl -> 
             if (D.in_range d_ori (extract_d hd)) 
             then search_br word hd  @ (search_br_lst word d_ori tl return_lst)
-            else (search_br_lst word d_ori tl return_lst)
-      in
+            else (search_br_lst word d_ori tl return_lst) 
+        in
       match br with
       | Single (d, w) -> 
           (* if within tolerance range then add to list *)
@@ -242,7 +242,7 @@ struct
     in
     match tree with
     | Empty -> [] 
-    | Branch b -> D.sort word (search_br word b)
+    | Branch b -> search_br word b
 
 
 
@@ -260,38 +260,45 @@ struct
     | Branch b -> search_br word b
 
 
-
   let rec multiple_search (w_lst: string list) (tree: tree) : string list list = 
     match w_lst with
     | [] -> []
     | hd::tl -> (search hd tree) :: (multiple_search tl tree)
 
 
+  let print_result (input_lst: string list) (tree: tree) : unit = 
+    let output = (multiple_search input_lst tree) in
+    let rec str_big_lst (input: string list list) : string = 
+      let rec str_sm_lst (input: string list) : string = 
+        match input with
+        | [] -> ""
+        | hd::tl -> hd ^ " " ^ str_sm_lst tl in
+      match input with
+      | [] -> ""
+      | hd::tl -> str_sm_lst hd ^ "\n" ^ str_big_lst tl in
+    print_string (str_big_lst output); (flush_all ())
 
-  let print_result (input_lst: string list) (tree: tree) : unit = raise ImplementMe
 
   let insert (word: string) (tree: tree) : tree = 
     let rec add_to_branch (word: string) (br: branch) : branch = 
       let rec inject_to_lst (word: string) (d1: d) (b_lst: branch list) : branch list =
-                match b_lst with
-                | [] -> [Single(d1, word)]
-                | [hd] -> (match D.compare d1 (extract_d hd) with
-                           | Equal -> [add_to_branch word hd]
-                           | Less -> (inject_to_lst word d1 []) @ [hd]
-                           | Greater -> hd::(inject_to_lst word d1 []))
-                | hd::tl -> (match D.compare d1 (extract_d hd) with
-                             | Equal -> (add_to_branch word hd)::tl
-                             | Less -> (inject_to_lst word d1 []) @ hd::tl
-                             | Greater -> hd::(inject_to_lst word d1 tl)) in
+        match b_lst with
+        | [] -> [Single(d1, word)]
+        | [hd] -> (match D.compare d1 (extract_d hd) with
+                   | Equal -> [add_to_branch word hd]
+                   | Less -> (inject_to_lst word d1 []) @ [hd]
+                   | Greater -> hd::(inject_to_lst word d1 []))
+        | hd::tl -> (match D.compare d1 (extract_d hd) with
+                     | Equal -> (add_to_branch word hd)::tl
+                     | Less -> (inject_to_lst word d1 []) @ hd::tl
+                     | Greater -> hd::(inject_to_lst word d1 tl)) in
       match br with
       | Single (d, s) -> 
           if (same_word s word) then br 
           else Mult (d, s, [Single ((D.distance s word), word)]) 
       | Mult (d, s, b_lst) -> 
-          (* if we found the same word, then return as is *)
           if (same_word s word) then br 
-          (* else look through its children (list) *)
-          else (* let d1 = D.distance s word in *) Mult (d, s, (inject_to_lst word (D.distance s word) b_lst)) in
+          else Mult (d, s, (inject_to_lst word (D.distance s word) b_lst)) in
     match tree with
     | Empty -> Branch (Single (D.zero, word))
     | Branch b -> Branch (add_to_branch word b)
