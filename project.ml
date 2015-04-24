@@ -181,7 +181,69 @@ struct
     assert((distance "cook" "cok") = 1);
     ()
 
+end
+
+module DamerauLevDistance : DISTANCE with type d=int = 
+struct
+
+  type d = int
+  let tolerance = 1
+
+  let distance s1 s2 = 
+    let (s1, s2) = (String.lowercase s1, String.lowercase s2) in
+    let (len1, len2) = (String.length s1, String.length s2) in
+    let rec get_distance (col:int) (row:int) (two_prev_row:int array) 
+      (prev_row:int array) (current_row:int array) : int = 
+      let (c1, c2) = (String.get s1 (row - 1), String.get s2 (col - 1)) in
+      let (del, sub, ins) = (Array.get current_row (col - 1), 
+            Array.get prev_row (col - 1), Array.get prev_row col) in
+      let d = min del (min sub ins) in
+      let d' = if c1 <> c2 then 1 + d else sub in
+      let d' = 
+        if col > 1 && row > 1 && c1 = (String.get s2 (col - 2)) && 
+          c2 = (String.get s1 (row - 2)) then 
+          min d' (1 + Array.get two_prev_row (col -2)) else d' in
+      if col = len2 && row = len1 then d'
+      else
+        (Array.set current_row col d';
+        if col = len2 then get_distance 1 (row + 1) prev_row current_row 
+                              (Array.create ~len:(len2 + 1) (row + 1))
+        else get_distance (col + 1) row two_prev_row prev_row current_row) in
+    if len1 = 0 then len2 
+    else if len2 = 0 then len1
+    else get_distance 1 1 (Array.create ~len:(len2 + 1) ~-1) (Array.init 
+      (len2 + 1) ~f:(fun i -> i))  (Array.create ~len:(len2 + 1) 1)
+
+  let zero = 0
+
+  let is_similar (d: d) : bool =
+    d <= tolerance
+
+  let in_range (d1: d) (d2: d) : bool =
+    abs(d1 - d2) <= 1
+
+  let compare (d1: d) (d2: d) : order =
+    if d1 = d2 then Equal 
+    else if d1 > d2 then Greater
+    else Less
+
+  let sort (search:string) (wlst:string list) : string list = 
+    List.sort ~cmp:(fun x y -> (distance search x) - (distance search y)) wlst
+
+  let run_tests =
+    assert((distance "evidence" "eviednce") = 1);
+    assert((distance "evidence" "providence") = 3);
+    assert((distance "evidence" "provident") = 5);
+    assert((distance "evidence" "provoident") = 6);
+    assert((distance "cook" "snook") = 2);
+    assert((distance "" "") = 0);
+    assert((distance "CS51" "CS51") = 0);
+    assert((distance "cool" "Cool") = 0);
+    assert((distance "cook" "cok") = 1);
+    ()
+
 end 
+
 
 
 (* implementation for BKtree *)
@@ -309,6 +371,7 @@ struct
       | hd::tl -> 
           let s = String.filter ~f:(fun c -> (c >= 'a' && c <= 'z')) hd in
           load_str_list tl (insert s t) in
+    Printf.printf "Loading dictionary..."; flush_all ();
     load_str_list (In_channel.read_lines filename) empty
             
   (***********************)
@@ -438,14 +501,25 @@ end
 
 let _ = NaiveLevDistance.run_tests
 let _ = DynamicLevDistance.run_tests
+let _ = DamerauLevDistance.run_tests
 
 
 module BKTree = 
   (BKtree(DynamicLevDistance) : BKTREE with type d = DynamicLevDistance.d)
 
 let _ = BKTree.run_tests
+
 let dict = BKTree.load_dict "dict.txt"
-let _ = BKTree.print_result "harvark" dict
+
+let _ = print_string "\n\ninterfxce: \n"; flush_all ()
+let _ = BKTree.print_result "interfxce" dict
+let _ = print_string "\ncomzuter: \n"; flush_all ()
+let _ = BKTree.print_result "comzuter" dict
+let _ = print_string "\ncow: \n"; flush_all ()
+let _ = BKTree.print_result "cow" dict
+let _ = print_string "\ncook: \n"; flush_all ()
+let _ = BKTree.print_result "cook" dict
+
 
 
 
