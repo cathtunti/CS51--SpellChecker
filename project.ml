@@ -193,16 +193,6 @@ struct
   (* Returns an empty BKtree *)
   let empty = Empty
 
-  let load_dict filename = raise ImplementMe
-  (*
-    let str_list = In_channel.read_lines filename in 
-    let rec load_str_list (lst: sting list) (t:tree) : tree =
-      match lst with
-      | [] -> t
-      | hd::tl -> 
-          let s = String.filter ~f:(fun c -> (c >= 'a' && c <= 'z')) hd in
-  *)
-
 
   (********************)
   (* Helper Functions *)
@@ -295,6 +285,15 @@ struct
     match tree with
     | Empty -> Branch (Single (D.zero, word))
     | Branch b -> Branch (add_to_branch word b)
+
+  let load_dict (filename:string) : tree = 
+    let rec load_str_list (lst: string list) (t:tree) : tree =
+      match lst with
+      | [] -> t
+      | hd::tl -> 
+          let s = String.filter ~f:(fun c -> (c >= 'a' && c <= 'z')) hd in
+          load_str_list tl (insert s t) in
+    load_str_list (In_channel.read_lines filename) empty
             
   (***********************)
   (*        Test         *)
