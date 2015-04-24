@@ -66,7 +66,10 @@ sig
   val multiple_search : string list -> tree -> string list list 
 
   (* Print out results of multiple_search in a readable format *)
-  val print_result : string list -> tree -> unit 
+  val print_result : string -> tree -> unit 
+
+  (* Print out results of multiple_search in a readable format *)
+  val print_mult_result : string list -> tree -> unit 
 
   (* Tests for functions in this module *)
   val run_tests : unit -> unit
@@ -204,8 +207,7 @@ struct
 
   let extract_d (branch: branch) : d =
     match branch with
-    | Single (d,_) -> d
-    | Mult (d,_,_) -> d
+    | Single (d,_) | Mult (d,_,_) -> d
 
 
   (***********************)
@@ -258,17 +260,20 @@ struct
     | hd::tl -> (search hd tree) :: (multiple_search tl tree)
 
 
-  let print_result (input_lst: string list) (tree: tree) : unit = 
+  let print_mult_result (input_lst: string list) (tree: tree) : unit = 
     let output = (multiple_search input_lst tree) in
-    let rec str_big_lst (input: string list list) : string = 
-      let rec str_sm_lst (input: string list) : string = 
-        match input with
+    let rec str_big_lst (output: string list list) : string = 
+      let rec str_sm_lst (output: string list) : string = 
+        match output with
         | [] -> ""
         | hd::tl -> hd ^ " " ^ str_sm_lst tl in
-      match input with
+      match output with
       | [] -> ""
       | hd::tl -> str_sm_lst hd ^ "\n" ^ str_big_lst tl in
     print_string (str_big_lst output); (flush_all ())
+
+  let print_result (input: string) (tree: tree) : unit =
+    print_mult_result [input] tree 
 
 
   let insert (word: string) (tree: tree) : tree = 
@@ -351,12 +356,68 @@ struct
 
   let test_is_member () = raise ImplementMe
   
-  let test_search () = raise ImplementMe
+  let test_search () = 
+    let (w4, w5, w6, w7, w8, w9, w10, w11) = ("book", "books", "boo", "boon", "cook", "cake", "cape", "cart") in
+    let d0 = D.zero in
+    let d45 = D.distance w4 w5 in
+    let d56 = D.distance w5 w6 in
+    let d67 = D.distance w6 w7 in
+    let d68 = D.distance w6 w8 in
+    let d49 = D.distance w4 w9 in
+    let d9_10 = D.distance w9 w10 in
+    let d9_11 = D.distance w9 w11 in
+    let t =  Branch(Mult(d0, w4, [Mult(d45, w5, [Mult(d56, w6, [Single(d67, w7); Single(d68, w8)])]); 
+                                  Mult(d49, w9, [Single(d9_10, w10); Single(d9_11, w11)])])) in
+    let (s1, s2, s3, s4, s5) = ("caqe", "boop", "care", "supercalifragilisticexpialidocious", "barn") in
+    assert (search s1 t = ["cape"; "cake"]);
+    assert (search s2 t = ["boon"; "boo"; "book"]);
+    assert (search s3 t = ["cape"; "cake"]);
+    assert (search s4 t = []);
+    assert (search s5 t = []);
+    
+    let (w12, w13, w14, w15) = ("pool","food","form","pearl") in
+    let s6 = "form" in
+    let d4_12 = D.distance w4 w12 in
+    let d12_13 = D.distance w12 w13 in
+    let d12_15 = D.distance w12 w15 in
+    let d13_14 = D.distance w13 w14 in
+    let t = Branch(Mult(d0, w4, [Mult(d45, w5, [Mult(d56, w6, [Single(d67, w7); Single(d68, w8)])]); 
+                                 Mult(d49, w9, [Single(d9_10, w10); Single(d9_11, w11)]);
+                                 Mult(d4_12, w12, [Mult(d12_13, w13, [Single(d13_14, w14)]); Single(d12_15, w15)])])) in
+    assert (search s6 t = ["form"]);
+    ()
+    
+  let test_same_word () =
+    assert (same_word "moo" "moo" = true);
+    assert (same_word "root" "moo" = false);
+    assert (same_word "123" "moo" = false);
+    assert (same_word "123" "123" = true);
+    ()
+    
+  let test_extract_d () =
+    let (w4, w5, w6, w7, w8, w9, w10, w11) = ("book", "books", "boo", "boon", "cook", "cake", "cape", "cart") in
+    let d0 = D.zero in
+    let d45 = D.distance w4 w5 in
+    let d56 = D.distance w5 w6 in
+    let d67 = D.distance w6 w7 in
+    let d68 = D.distance w6 w8 in
+    let d49 = D.distance w4 w9 in
+    let d9_10 = D.distance w9 w10 in
+    let d9_11 = D.distance w9 w11 in
+    let t = Mult(d0, w4, [Mult(d45, w5, [Mult(d56, w6, [Single(d67, w7); Single(d68, w8)])]); 
+                          Mult(d49, w9, [Single(d9_10, w10); Single(d9_11, w11)])]) in
+    let t2 = Single(d9_11, w11) in
+    assert (extract_d t = d0);
+    assert (extract_d t2 = d9_11);
+    ()
 
   let run_tests () = 
     test_insert ();
+    test_is_member ();
+    test_search ();
+    test_same_word ();
+    test_extract_d ();
     ()
-
 
 end
 
@@ -368,7 +429,7 @@ module BKTree = (BKtree(DynamicLevDistance) : BKTREE with type d = DynamicLevDis
 
 let _ = BKTree.run_tests
 let dict = BKTree.load_dict "dict.txt"
-let _ = BKTree.print_result ["cook";"cool"] dict
+let _ = BKTree.print_result "cook" dict
 
 
 
