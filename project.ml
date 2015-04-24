@@ -348,12 +348,38 @@ struct
                                      Mult(d49, w9, [Single(d9_10, w10); Single(d9_11, w11)])])));
     ()
 
-  let test_is_member () = raise ImplementMe
+  let test_is_member () = 
+    let (w4, w5, w6, w7, w8, w9, w10, w11) = ("book", "books", "boo", "boon", "cook", "cake", "cape", "cart") in
+    let d0 = D.zero in
+    let d45 = D.distance w4 w5 in
+    let d56 = D.distance w5 w6 in
+    let d67 = D.distance w6 w7 in
+    let d68 = D.distance w6 w8 in
+    let d49 = D.distance w4 w9 in
+    let d9_10 = D.distance w9 w10 in
+    let d9_11 = D.distance w9 w11 in
+    let t =  Branch(Mult(d0, w4, [Mult(d45, w5, [Mult(d56, w6, [Single(d67, w7); Single(d68, w8)])]); 
+                                  Mult(d49, w9, [Single(d9_10, w10); Single(d9_11, w11)])])) in
+    let (w12, w13, w14) = ("random", "test", "nothing") in
+    assert (is_member w4 t = true);
+    assert (is_member w5 t = true);
+    assert (is_member w6 t = true);
+    assert (is_member w7 t = true);
+    assert (is_member w8 t = true);
+    assert (is_member w9 t = true);
+    assert (is_member w10 t = true);
+    assert (is_member w11 t = true);
+    assert (is_member w12 t = false);
+    assert (is_member w13 t = false);
+    assert (is_member w14 t = true);
+    
+    ()
   
   let test_search () = raise ImplementMe
 
   let run_tests () = 
     test_insert ();
+    test_is_member ();
     ()
 
 
@@ -377,6 +403,12 @@ struct
 end
 *)
 
-
+let time_fun f = 
+  fun x -> 
+    let t0 = Unix.time() in 
+    let _ = f x in 
+    let t1 = Unix.time() in 
+      (t1 -. t0)
+;;
 
 
