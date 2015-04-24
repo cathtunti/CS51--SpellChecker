@@ -66,7 +66,10 @@ sig
   val multiple_search : string list -> tree -> string list list 
 
   (* Print out results of multiple_search in a readable format *)
-  val print_result : string list -> tree -> unit 
+  val print_result : string -> tree -> unit 
+
+  (* Print out results of multiple_search in a readable format *)
+  val print_mult_result : string list -> tree -> unit 
 
   (* Tests for functions in this module *)
   val run_tests : unit -> unit
@@ -202,8 +205,7 @@ struct
 
   let extract_d (branch: branch) : d =
     match branch with
-    | Single (d,_) -> d
-    | Mult (d,_,_) -> d
+    | Single (d,_) | Mult (d,_,_) -> d
 
 
   (***********************)
@@ -256,17 +258,20 @@ struct
     | hd::tl -> (search hd tree) :: (multiple_search tl tree)
 
 
-  let print_result (input_lst: string list) (tree: tree) : unit = 
+  let print_mult_result (input_lst: string list) (tree: tree) : unit = 
     let output = (multiple_search input_lst tree) in
-    let rec str_big_lst (input: string list list) : string = 
-      let rec str_sm_lst (input: string list) : string = 
-        match input with
+    let rec str_big_lst (output: string list list) : string = 
+      let rec str_sm_lst (output: string list) : string = 
+        match output with
         | [] -> ""
         | hd::tl -> hd ^ " " ^ str_sm_lst tl in
-      match input with
+      match output with
       | [] -> ""
       | hd::tl -> str_sm_lst hd ^ "\n" ^ str_big_lst tl in
     print_string (str_big_lst output); (flush_all ())
+
+  let print_result (input: string) (tree: tree) : unit =
+    print_mult_result [input] tree 
 
 
   let insert (word: string) (tree: tree) : tree = 
@@ -366,7 +371,7 @@ module BKTree = (BKtree(DynamicLevDistance) : BKTREE with type d = DynamicLevDis
 
 let _ = BKTree.run_tests
 let dict = BKTree.load_dict "dict.txt"
-let _ = BKTree.print_result ["cook";"cool"] dict
+let _ = BKTree.print_result "cook" dict
 
 
 (* implementation for Damerau–Levenshtein distance using dynamic programming 
