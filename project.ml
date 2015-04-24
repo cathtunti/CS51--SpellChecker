@@ -429,7 +429,7 @@ module BKTree = (BKtree(DynamicLevDistance) : BKTREE with type d = DynamicLevDis
 
 let _ = BKTree.run_tests
 let dict = BKTree.load_dict "dict.txt"
-let _ = BKTree.print_result "cook" dict
+let _ = BKTree.print_result "harvark" dict
 
 
 
