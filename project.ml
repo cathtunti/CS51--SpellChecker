@@ -148,7 +148,7 @@ struct
          else get_distance (col + 1) row prev_row current_row) in
     if len1 = 0 then len2 
     else if len2 = 0 then len1
-    else get_distance 1 1 (Array.init (len2 + 1) (fun i -> i)) 
+    else get_distance 1 1 (Array.init (len2 + 1) ~f:(fun i -> i)) 
                         (Array.create ~len:(len2 + 1) 1)
 
   let zero = 0
