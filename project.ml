@@ -122,6 +122,7 @@ struct
     assert((distance "" "") = 0);
     assert((distance "CS51" "CS51") = 0);
     assert((distance "cool" "Cool") = 0);
+    assert((distance "cook" "cok") = 1);
     ()
 
 end
@@ -141,13 +142,13 @@ struct
       let (del, sub, ins) = (Array.get current_row (col - 1), 
             Array.get prev_row (col - 1), Array.get prev_row col) in
       let d = min del (min sub ins) in
-      let d' = if c1 <> c2 then 1 + d else d in
+      let d' = if c1 <> c2 then 1 + d else sub in
       if col = len2 && row = len1 then d'
       else
         (Array.set current_row col d';
-        if col = len2 then get_distance 1 (row + 1) current_row 
+         if col = len2 then get_distance 1 (row + 1) current_row 
                               (Array.create ~len:(len2 + 1) (row + 1))
-        else get_distance (col + 1) row prev_row current_row) in
+         else get_distance (col + 1) row prev_row current_row) in
     if len1 = 0 then len2 
     else if len2 = 0 then len1
     else get_distance 1 1 (Array.init (len2 + 1) (fun i -> i)) 
@@ -177,6 +178,7 @@ struct
     assert((distance "" "") = 0);
     assert((distance "CS51" "CS51") = 0);
     assert((distance "cool" "Cool") = 0);
+    assert((distance "cook" "cok") = 1);
     ()
 
 end 
@@ -372,6 +374,7 @@ module BKTree = (BKtree(DynamicLevDistance) : BKTREE with type d = DynamicLevDis
 let _ = BKTree.run_tests
 let dict = BKTree.load_dict "dict.txt"
 let _ = BKTree.print_result "cook" dict
+
 
 
 (* implementation for Damerau–Levenshtein distance using dynamic programming 
