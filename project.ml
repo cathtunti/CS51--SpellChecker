@@ -245,7 +245,7 @@ struct
 
 
 
-  let rec is_member (word: string) (tree: tree) : bool = 
+  let is_member (word: string) (tree: tree) : bool = 
     let rec search_br (word: string) (br: branch) : bool =
       let rec search_br_lst (word: string) b_lst : bool =
         match b_lst with
@@ -267,7 +267,7 @@ struct
 
   let print_result (input_lst: string list) (tree: tree) : unit = raise ImplementMe
 
-  let rec insert (word: string) (tree: tree) : tree = 
+  let insert (word: string) (tree: tree) : tree = 
     let rec add_to_branch (word: string) (br: branch) : branch = 
       let rec inject_to_lst (word: string) (d1: d) (b_lst: branch list) : branch list =
                 match b_lst with
