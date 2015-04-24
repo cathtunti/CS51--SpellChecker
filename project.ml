@@ -139,7 +139,7 @@ struct
       let (del, sub, ins) = (Array.get current_row (col - 1), 
             Array.get prev_row (col - 1), Array.get prev_row col) in
       let d = min del (min sub ins) in
-      let d' = if c1 <> c2 then 1 + d else d in
+      let d' = if c1 <> c2 then 1 + d else sub in
       if col = len2 && row = len1 then d'
       else
         (Array.set current_row col d';
