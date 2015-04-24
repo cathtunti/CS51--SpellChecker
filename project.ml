@@ -365,6 +365,8 @@ let _ = DynamicLevDistance.run_tests
 module BKTree = (BKtree(DynamicLevDistance) : BKTREE with type d = DynamicLevDistance.d)
 
 let _ = BKTree.run_tests
+let dict = BKTree.load_dict "dict.txt"
+let _ = BKTree.print_result ["cook";"cool"] dict
 
 
 (* implementation for Damerau–Levenshtein distance using dynamic programming 
