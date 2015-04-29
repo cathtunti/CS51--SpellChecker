@@ -16,10 +16,14 @@ sig
   (* Zero distance *)
   val zero : d
 
+  (* for BK to decide wheter to add a work to a return list*)
   val is_similar : d -> bool
 
-  (* *)
+  (* for BK to decide which branch of the tree to crawl *)
   val in_range : d -> d -> bool
+
+  (* like in_range, but allows for modification of tolerance*)
+  val in_range_by : int -> d -> d -> bool
 
   val compare : d -> d -> order
 
@@ -106,6 +110,10 @@ struct
   let in_range (d1: d) (d2: d) : bool =
     abs(d1 - d2) <= tolerance
 
+  let in_range_by (incr: int) (d1: d) (d2: d) : bool =
+    let local_tole = tolerance + incr in
+    abs(d1 - d2) <= local_tole
+
   let compare (d1: d) (d2: d) : order =
     if d1 = d2 then Equal 
     else if d1 > d2 then Greater
@@ -160,7 +168,11 @@ struct
     d <= tolerance
 
   let in_range (d1: d) (d2: d) : bool =
-    abs(d1 - d2) <= 1
+    abs(d1 - d2) <= tolerance
+
+    let in_range_by (incr: int) (d1: d) (d2: d) : bool =
+      let local_tole = tolerance + incr in
+      abs(d1 - d2) <= local_tole
 
   let compare (d1: d) (d2: d) : order =
     if d1 = d2 then Equal 
@@ -213,6 +225,10 @@ struct
   (***********************)
   (* Interface Functions *)
   (***********************)
+  
+  (* increase tolerance by 1 for every 10 chars *)
+  let find_tole (word: string) : int = (String.length word)/10 
+
 
   let search (word: string) (tree: tree) : string list = 
     let rec search_br (word: string) (br: branch) : string list = 
@@ -221,7 +237,7 @@ struct
         match b_lst with
         | [] -> return_lst
         | hd::tl -> 
-            if (D.in_range d_ori (extract_d hd)) 
+            if (D.in_range_by find_tole(word) d_ori (extract_d hd)) 
             then search_br word hd  @ (search_br_lst word d_ori tl return_lst)
             else (search_br_lst word d_ori tl return_lst) 
         in
@@ -238,7 +254,6 @@ struct
     match tree with
     | Empty -> [] 
     | Branch b -> D.sort word (search_br word b)
-
 
 
   let is_member (word: string) (tree: tree) : bool = 
