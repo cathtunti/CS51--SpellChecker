@@ -23,8 +23,10 @@ sig
   (* for BK to decide which branch of the tree to crawl *)
   val in_range : int -> d -> d -> bool
 
+  (* compare two distances if <,>,= *)
   val compare : d -> d -> order
 
+  (* use probability to sort the return list from BKtree's search *)
   val sort : int -> string -> (string * float) list -> string list
 
   (* Tests for functions in this module *)
@@ -114,7 +116,9 @@ struct
     let sort2 = 
       let f (tuple1:string*float) (tuple2:string*float) = 
         let k = float tolerance in
-        let prob_of_dist d = 999. *. (1000. ** (k -. float d)) /. (-1. +. 1000. ** (k +. 1.)) in
+        (* turn edit distance into prob. Look at write up for more info *)
+        let prob_of_dist d = 
+          999. *. (1000. ** (k -. float d)) /. (-1. +. 1000. ** (k +. 1.)) in
         let val1 = prob_of_dist (distance word (fst tuple1)) *. snd tuple1 in
         let val2 = prob_of_dist (distance word (fst tuple2)) *. snd tuple2 in
         if val1 > val2 then -1
@@ -164,12 +168,43 @@ struct
 
 end
 
+(* WARNING *)
+(* Damerau CANNOT BE USED WITH BK-TREE (structurally) look at writeup *)
+module DamerauLevDistance : DISTANCE with type d=int = 
+struct
 
-  (*****************************)
-  (****                      ***)
-  (** BKTree with Probability **)
-  (*****************************)
-  (*****************************)
+  include NaiveLevDistance
+
+  let distance s1 s2 = 
+    let (s1, s2) = (String.lowercase s1, String.lowercase s2) in
+    let (len1, len2) = (String.length s1, String.length s2) in
+    let rec get_distance (col:int) (row:int) (two_prev_row:int array) 
+      (prev_row:int array) (current_row:int array) : int = 
+      let (c1, c2) = (String.get s1 (row - 1), String.get s2 (col - 1)) in
+      let (del, sub, ins) = (Array.get current_row (col - 1), 
+            Array.get prev_row (col - 1), Array.get prev_row col) in
+      let d = min del (min sub ins) in
+      let d' = if c1 <> c2 then 1 + d else sub in
+      let d' = 
+        if col > 1 && row > 1 && c1 = (String.get s2 (col - 2)) && 
+          c2 = (String.get s1 (row - 2)) then 
+          min d' (1 + Array.get two_prev_row (col -2)) else d' in
+      if col = len2 && row = len1 then d'
+      else
+        (Array.set current_row col d';
+        if col = len2 then get_distance 1 (row + 1) prev_row current_row 
+                              (Array.create ~len:(len2 + 1) (row + 1))
+        else get_distance (col + 1) row two_prev_row prev_row current_row) in
+    if len1 = 0 then len2 
+    else if len2 = 0 then len1
+    else get_distance 1 1 (Array.create ~len:(len2 + 1) ~-1) (Array.init 
+      (len2 + 1) ~f:(fun i -> i))  (Array.create ~len:(len2 + 1) 1)
+
+end
+
+(*****************************)
+(** BKTree with Probability **)
+(*****************************)
 
 (* implementation for BKtree *)
 module BKtree_prob(D:DISTANCE) : BKTREE with type d=D.d =
@@ -180,12 +215,17 @@ struct
   exception InvalidFile
 
   type d = D.d
-  type branch = Single of d * (string * float) | Mult of (d * (string * float) * branch list)
+  
+  (* Single is a node with no child, where Mult has at least 1 children *)
+  type branch = Single of d * (string * float) 
+                | Mult of (d * (string * float) * branch list)
+  
   type tree = Empty | Branch of branch
 
   (* Returns an empty BKtree *)
   let empty = Empty
 
+  (* the max number of suggested words return to user *)
   let display_num = 10
 
 
@@ -193,11 +233,17 @@ struct
   (* Helper Functions *)
   (********************)
 
-  let same_word (w1: string) (w2: string) : bool = ((D.distance w1 w2) = D.zero)
-
+  (* extract distance out of a brach type *)
   let extract_d (branch: branch) : d =
     match branch with
     | Single (d,_) | Mult (d,_,_) -> d
+
+  (* to truncate the return list to a given length *) 
+  let rec truncate (len: int) (suggest: string list) : string list =
+    if len = 0 then [] else 
+    match suggest with
+    | [] -> []
+    | hd::tl -> hd::(truncate (len - 1) tl)
 
 
   (***********************)
@@ -211,22 +257,26 @@ struct
 
   let search (word: string) (tree: tree) : string list = 
     let tole = find_tole word in
+    (* traverse through branch *)
     let rec search_br (word: string) (br: branch) : (string * float) list = 
+      (* traverse through other branches connected to Mult *)
       let rec search_br_lst (word: string) (d_ori: d) (b_lst: branch list) 
         (return_lst: (string * float) list ) : (string * float) list =
         match b_lst with
         | [] -> return_lst
         | hd::tl -> 
+            (* search branch if within tole. range before moving to nxt child *)
             if (D.in_range tole d_ori (extract_d hd)) 
             then search_br word hd  @ (search_br_lst word d_ori tl return_lst)
             else (search_br_lst word d_ori tl return_lst) 
         in
       match br with
       | Single (_, (w,p)) -> 
-          (* if within tolerance range then add to list *)
+          (* if similar enough then add to return list *)
           if D.is_similar tole (D.distance word w) then [(w,p)]
           else []
       | Mult (_, (w,p), b_lst) -> 
+          (* if similar enough, add to return list and search its children *)
           if D.is_similar tole (D.distance word w) 
           then (search_br_lst word (D.distance w word) b_lst [(w,p)]) 
           else (search_br_lst word (D.distance w word) b_lst [])
@@ -238,6 +288,7 @@ struct
 
   let is_member (word: string) (tree: tree) : bool = 
     let rec search_br (word: string) (br: branch) : bool =
+      (* traverse through other branches connected to Mult *)
       let rec search_br_lst (word: string) b_lst : bool =
         match b_lst with
         | [] -> false
@@ -255,17 +306,12 @@ struct
     | [] -> []
     | hd::tl -> (search hd tree) :: (multiple_search tl tree)
 
-  
-  let rec truncate (len: int) (suggest: string list) : string list =
-      if len = 0 then [] else 
-      match suggest with
-      | [] -> []
-      | hd::tl -> hd::(truncate (len - 1) tl)
-
       
   let print_mult_result (input_lst: string list) (tree: tree) : unit = 
     let output = (multiple_search input_lst tree) in
+    (* parse a return list of each input word *)
     let rec str_big_lst (output: string list list) : string = 
+      (* parse each return word in a return list *)
       let rec str_sm_lst (output: string list) : string = 
         match (truncate display_num output) with
         | [] -> ""
@@ -275,37 +321,48 @@ struct
       | hd::tl -> str_sm_lst hd ^ "\n" ^ str_big_lst tl in
     print_string (str_big_lst output); (flush_all ())
 
+  
   let print_result (input: string) (tree: tree) : unit =
     print_mult_result [input] tree 
 
 
   let insert (word_p: string * float) (tree: tree) : tree = 
+    (* either add a word to Single or Mult *)
     let rec add_to_branch (word_p: string * float) (br: branch) : branch = 
       let (w, _) = word_p in
-      let rec inject_to_lst (word_p: string * float) (d1: d) (b_lst: branch list) 
-        : branch list =
+      (* add a word into a Mult by travering through its list of children *)
+      let rec inject_to_lst (word_p: string * float) (d1: d) 
+        (b_lst: branch list) : branch list =
         match b_lst with
         | [] -> [Single(d1, word_p)]
-        | [hd] -> (match D.compare d1 (extract_d hd) with
-                   | Equal -> [add_to_branch word_p hd]
-                   | Less -> (inject_to_lst word_p d1 []) @ [hd]
-                   | Greater -> hd::(inject_to_lst word_p d1 []))
-        | hd::tl -> (match D.compare d1 (extract_d hd) with
-                     | Equal -> (add_to_branch word_p hd)::tl
-                     | Less -> (inject_to_lst word_p d1 []) @ hd::tl
-                     | Greater -> hd::(inject_to_lst word_p d1 tl)) in
+        | [hd] -> 
+            (* word with lower edit dist. (from parent) is at front of list *)
+            (match D.compare d1 (extract_d hd) with
+             | Equal -> [add_to_branch word_p hd]
+             | Less -> (inject_to_lst word_p d1 []) @ [hd]
+             | Greater -> hd::(inject_to_lst word_p d1 []))
+        | hd::tl -> 
+            (match D.compare d1 (extract_d hd) with
+             | Equal -> (add_to_branch word_p hd)::tl
+             | Less -> (inject_to_lst word_p d1 []) @ hd::tl
+             | Greater -> hd::(inject_to_lst word_p d1 tl)) in
       match br with
       | Single (d, (s, p)) -> 
-          if (same_word s w) then br 
+          if (s = w) then br 
           else Mult (d, (s, p), [Single ((D.distance s w), word_p)]) 
       | Mult (d, (s, p), b_lst) -> 
-          if (same_word s w) then br 
-          else Mult (d, (s, p), (inject_to_lst word_p (D.distance s w) b_lst)) in
+          if (s = w) then br 
+          (* traverse through Mult children to insert at the right place *)
+          else Mult (d, (s, p), (inject_to_lst word_p (D.distance s w) b_lst)) 
+      in
     match tree with
     | Empty -> Branch (Single (D.zero, word_p))
     | Branch b -> Branch (add_to_branch word_p b)
 
+
+  (* dictionary file must be in format "word\n 0.4454530e-20\n word_2\n ..." *)
   let load_dict (filename:string) : tree = 
+    (* convert string list to tuple list *)
     let rec strlst_to_tuplst (strlst:string list) 
       (tuplst: (string * float) list) : (string * float) list =
       match strlst with
@@ -336,7 +393,9 @@ struct
     assert (t = Branch(Mult(d0, w1, [Mult(d12, w2, [Single(d23, w3)])])));
     
     let (w4, w5, w6, w7, w8, w9, w10, w11) = 
-      (("book", 0.1111), ("books", 0.2222), ("boo", 0.0001), ("boon", 0.0003), ("cook", 0.3234), ("cake", 0.2342), ("cape", 0.2345), ("cart", 0.42094)) in
+      (("book", 0.1111), ("books", 0.2222), ("boo", 0.0001), ("boon", 0.0003), 
+      ("cook", 0.3234), ("cake", 0.2342), ("cape", 0.2345), ("cart", 0.42094)) 
+    in
     let t = insert  w4 empty in
     let d0 = D.zero in
     assert (t = Branch(Single(d0, w4)));
@@ -374,8 +433,10 @@ struct
   let test_is_member () = raise ImplementMe
   
   let test_search () = 
-     let (w4, w5, w6, w7, w8, w9, w10, w11) = 
-      (("book", 0.1111), ("books",0.2222), ("boo", 0.0001), ("boon", 0.0003), ("cook", 0.3234), ("cake", 0.2342), ("cape", 0.2345), ("cart", 0.42094)) in
+    let (w4, w5, w6, w7, w8, w9, w10, w11) = 
+      (("book", 0.1111), ("books",0.2222), ("boo", 0.0001), ("boon", 0.0003), 
+      ("cook", 0.3234), ("cake", 0.2342), ("cape", 0.2345), ("cart", 0.42094)) 
+    in
     let d0 = D.zero in
     let d45 = D.distance (fst w4) (fst w5) in
     let d56 = D.distance (fst w5) (fst w6) in
@@ -395,7 +456,8 @@ struct
     assert (search s4 t = []);
     assert (search s5 t = []);
     
-    let (w12, w13, w14, w15) = (("pool", 0.0002), ("food", 0.2333),("form", 0.22222), ("pearl", 0.23421)) in
+    let (w12, w13, w14, w15) = (("pool", 0.0002), ("food", 0.2333),
+      ("form", 0.22222), ("pearl", 0.23421)) in
     let s6 = "form" in
     let d4_12 = D.distance (fst w4) (fst w12) in
     let d12_13 = D.distance (fst w12) (fst w13) in
@@ -409,16 +471,18 @@ struct
     assert (search s6 t = ["form"]);
     ()
     
-  let test_same_word () =
+(*   let test_same_word () =
     assert (same_word "moo" "moo" = true);
     assert (same_word "root" "moo" = false);
     assert (same_word "123" "moo" = false);
     assert (same_word "123" "123" = true);
-    ()
+    () *)
     
   let test_extract_d () =
     let (w4, w5, w6, w7, w8, w9, w10, w11) = 
-      (("book", 0.1111), ("books",0.2222), ("boo", 0.0001), ("boon", 0.0003), ("cook", 0.3234), ("cake", 0.2342), ("cape", 0.2345), ("cart", 0.42094)) in
+      (("book", 0.1111), ("books",0.2222), ("boo", 0.0001), ("boon", 0.0003), 
+      ("cook", 0.3234), ("cake", 0.2342), ("cape", 0.2345), ("cart", 0.42094)) 
+    in
     let d0 = D.zero in
     let d45 = D.distance (fst w4) (fst w5) in
     let d56 = D.distance (fst w5) (fst w6) in
@@ -439,7 +503,6 @@ struct
     test_insert ();
     test_is_member ();
     test_search ();
-    test_same_word ();
     test_extract_d ();
     ()
 
