@@ -270,6 +270,15 @@ end
 (** BKTree with Probability **)
 (*****************************)
 
+(*
+ * Preserves two invariant Principles
+ * 1. A parent node can not have more than one immediate child 
+ *    with the same edit distance.
+ * 2. A Mult’s branch list (list of its children) is sorted in 
+ *    ascending order based on edit distance between its child and itself. 
+ * Look at write up for more explanation
+*)
+
 (* implementation for BKTree *)
 module BKTree(D:DISTANCE) : BKTREE with type d=D.d =
 struct
@@ -300,9 +309,9 @@ struct
     match branch with
     | Single (d,_) | Mult (d,_,_) -> d
 
-  (*************************)
-  (* Functions in Signatur *)
-  (*************************)
+  (**************************)
+  (* Functions in Signature *)
+  (**************************)
   
   let search (word: string) (tree: tree) : string list = 
     (* tolerance +1 for every 5 chars *)
