@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#author    :Mick Kajornrattana Catherine Tuntiserirat Billie Wei, Erika Puente 
+#author    :Mick Kajornrattana Catherine Tuntiserirat Billie Wei Erika Puente 
 #usage     :python pyscript.py
 #description   
 #   Run this file to create a new dictionary text file from words that are in 
