@@ -547,6 +547,8 @@ struct
   (* Returns an empty BKtree *)
   let empty = Empty
 
+  let display_num = 10
+
 
   (********************)
   (* Helper Functions *)
@@ -614,11 +616,19 @@ struct
     | [] -> []
     | hd::tl -> (search hd tree) :: (multiple_search tl tree)
 
+  
+  let rec truncate (len: int) (suggest: string list) : string list =
+      if len = 0 then [] else 
+      match suggest with
+      | [] -> []
+      | hd::tl -> hd::(truncate (len - 1) tl)
+
+      
   let print_mult_result (input_lst: string list) (tree: tree) : unit = 
     let output = (multiple_search input_lst tree) in
     let rec str_big_lst (output: string list list) : string = 
       let rec str_sm_lst (output: string list) : string = 
-        match output with
+        match (truncate display_num output) with
         | [] -> ""
         | hd::tl -> hd ^ " " ^ str_sm_lst tl in
       match output with

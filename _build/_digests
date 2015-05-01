@@ -1,5 +1,0 @@
-"Rule: ocaml: cmx* & o* -> native (%=project )": "\136*¾}úKÄå¨U\029\143Ö\001\022l"
-"Rule: ocaml: ml -> cmo & cmi (%=project )": "t¼*nùeg\158\153{\râ\159\131á\157"
-"Rule: ocaml dependencies ml (%=project )": "= \144\018¿s\028n+àMÚ:\155þ'"
-"Resource: /Users/Stuntiserirat/CS51--SpellChecker/project.ml": "¶ó¸P\026eK\025K×\t\029¡±Õ."
-"Rule: ocaml: ml & cmi -> cmx & o (%=project )": "¨ÜT\031ZI!ó\029ä\145Ì\011\014NÞ"
