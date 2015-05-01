@@ -1,21 +1,22 @@
-# CS51-- Spell Checker
+# Spell-Checker - BK trees and Levensthein Distance
 CS51 Final Project
 By Catherine Tuntiserirat, Mick (Chaowat) Kajornrattana, Erika Puente, Billie Wei
-
-CS51 Final Project: Spell Checker - BK trees and Levensthein Distance
-===========
-
-Installation
-------------
 
 
 	
 Running the code
 ----------------
 
+To complie the file: 
 ```
-Usage: main.py [options]
+make 
+```
+or
+``
+make
+````
 
+````
 Options:
   -h, --help            show this help message and exit
   -t FILE, --train=FILE
