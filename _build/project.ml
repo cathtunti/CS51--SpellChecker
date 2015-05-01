@@ -110,16 +110,18 @@ struct
     else if d1 > d2 then Greater
     else Less
 
-  let rec sort (tolerance: int) (word: string) (wlst: (string * float) list) : string list = 
-    let k = float tolerance in
-    let prob_of_dist (d: d) : float = (2. ** (k -. float d)) /. (-1. +. 2. ** (k +. 1.)) in
-    match wlst with
-    | [] -> []
-    | hd::[] -> [fst hd]
-    | h1::h2::tl -> let val1 = prob_of_dist (distance word (fst h1)) *. snd h1 in
-                    let val2 = prob_of_dist (distance word (fst h2)) *. snd h2 in
-                    if  val1 < val2 then (fst h1)::(sort tolerance word (h2::tl))
-                    else (fst h2)::(sort tolerance word (h1::tl))
+  let sort (tolerance: int) (word: string) (wlst: (string * float) list) = 
+    let sort2 = 
+      let f (tuple1:string*float) (tuple2:string*float) = 
+        let k = float tolerance in
+        let prob_of_dist d = 99. *. (100. ** (k -. float d)) /. (-1. +. 100. ** (k +. 1.)) in
+        let val1 = prob_of_dist (distance word (fst tuple1)) *. snd tuple1 in
+        let val2 = prob_of_dist (distance word (fst tuple2)) *. snd tuple2 in
+        if val1 > val2 then -1
+        else if val2 > val1 then 1
+        else 0 in
+      List.sort ~cmp:(f) in
+    List.map ~f:(fun x -> fst x) (sort2 wlst) 
 
   let run_tests =
     assert((distance "evidence" "providence") = 3);
@@ -137,7 +139,7 @@ end
 module DynamicLevDistance : DISTANCE with type d=int = 
 struct
 
-  type d = int
+  include NaiveLevDistance
 
   let distance (s1: string) (s2: string) : int = 
     let (s1, s2) = (String.lowercase s1, String.lowercase s2) in
@@ -160,115 +162,8 @@ struct
     else get_distance 1 1 (Array.init (len2 + 1) ~f:(fun i -> i)) 
                         (Array.create ~len:(len2 + 1) 1)
 
-  let zero = 0
-
-  let is_similar (tolerance: int) (d: d) : bool =
-    d <= tolerance
-
-  let in_range (tolerance: int) (d1: d) (d2: d) : bool =
-    abs(d1 - d2) <= tolerance
-
-  let compare (d1: d) (d2: d) : order =
-    if d1 = d2 then Equal 
-    else if d1 > d2 then Greater
-    else Less
-
-  let sort (tolerance: int) (word: string) (wlst: (string * float) list) = 
-    let sort2 = 
-      let f (tuple1:string*float) (tuple2:string*float) = 
-        let k = float tolerance in
-        let prob_of_dist (d: d) : float = 99. *. (100. ** (k -. float d)) /. (-1. +. 100. ** (k +. 1.)) in
-        let val1 = prob_of_dist (distance word (fst tuple1)) *. snd tuple1 in
-        let val2 = prob_of_dist (distance word (fst tuple2)) *. snd tuple2 in
-        if val1 > val2 then -1
-        else if val2 > val1 then 1
-        else 0 in
-      List.sort ~cmp:(f) in
-    List.map ~f:(fun x -> fst x) (sort2 wlst) 
-
-  let run_tests =
-    assert((distance "evidence" "providence") = 3);
-    assert((distance "evidence" "provident") = 5);
-    assert((distance "evidence" "provoident") = 6);
-    assert((distance "cook" "snook") = 2);
-    assert((distance "" "") = 0);
-    assert((distance "CS51" "CS51") = 0);
-    assert((distance "cool" "Cool") = 0);
-    assert((distance "cook" "cok") = 1);
-    ()
-
 end
 
-module DamerauLevDistance : DISTANCE with type d=int = 
-struct
-
-  type d = int
-
-  let distance s1 s2 = 
-    let (s1, s2) = (String.lowercase s1, String.lowercase s2) in
-    let (len1, len2) = (String.length s1, String.length s2) in
-    let rec get_distance (col:int) (row:int) (two_prev_row:int array) 
-      (prev_row:int array) (current_row:int array) : int = 
-      let (c1, c2) = (String.get s1 (row - 1), String.get s2 (col - 1)) in
-      let (del, sub, ins) = (Array.get current_row (col - 1), 
-            Array.get prev_row (col - 1), Array.get prev_row col) in
-      let d = min del (min sub ins) in
-      let d' = if c1 <> c2 then 1 + d else sub in
-      let d' = 
-        if col > 1 && row > 1 && c1 = (String.get s2 (col - 2)) && 
-          c2 = (String.get s1 (row - 2)) then 
-          min d' (1 + Array.get two_prev_row (col -2)) else d' in
-      if col = len2 && row = len1 then d'
-      else
-        (Array.set current_row col d';
-        if col = len2 then get_distance 1 (row + 1) prev_row current_row 
-                              (Array.create ~len:(len2 + 1) (row + 1))
-        else get_distance (col + 1) row two_prev_row prev_row current_row) in
-    if len1 = 0 then len2 
-    else if len2 = 0 then len1
-    else get_distance 1 1 (Array.create ~len:(len2 + 1) ~-1) (Array.init 
-      (len2 + 1) ~f:(fun i -> i))  (Array.create ~len:(len2 + 1) 1)
-
-  let zero = 0
-
-  let is_similar (tolerance: int) (d: d) : bool =
-    d <= tolerance
-
-  let in_range (tolerance: int) (d1: d) (d2: d) : bool =
-    abs(d1 - d2) <= tolerance
-
-  let compare (d1: d) (d2: d) : order =
-    if d1 = d2 then Equal 
-    else if d1 > d2 then Greater
-    else Less
-
-  let sort (tolerance: int) (word: string) (wlst: (string * float) list) = 
-    let sort2 = 
-      let f (tuple1:string*float) (tuple2:string*float) = 
-        let k = float tolerance in
-        let prob_of_dist (d: d) : float = (2. ** (k -. float d)) /. (-1. +. 2. ** (k +. 1.)) in
-        let val1 = prob_of_dist (distance word (fst tuple1)) *. snd tuple1 in
-        let val2 = prob_of_dist (distance word (fst tuple2)) *. snd tuple2 in
-        if val1 > val2 then 1
-        else if val2 > val1 then -1
-        else 0 in
-      List.sort ~cmp:(f) in
-    List.map ~f:(fun x -> fst x) (sort2 wlst) 
-
-
-  let run_tests =
-    assert((distance "evidence" "eviednce") = 1);
-    assert((distance "evidence" "providence") = 3);
-    assert((distance "evidence" "provident") = 5);
-    assert((distance "evidence" "provoident") = 6);
-    assert((distance "cook" "snook") = 2);
-    assert((distance "" "") = 0);
-    assert((distance "CS51" "CS51") = 0);
-    assert((distance "cool" "Cool") = 0);
-    assert((distance "cook" "cok") = 1);
-    ()
-
-end 
 
   (*****************************)
   (****                      ***)
@@ -290,6 +185,8 @@ struct
 
   (* Returns an empty BKtree *)
   let empty = Empty
+
+  let display_num = 10
 
 
   (********************)
@@ -358,11 +255,19 @@ struct
     | [] -> []
     | hd::tl -> (search hd tree) :: (multiple_search tl tree)
 
+  
+  let rec truncate (len: int) (suggest: string list) : string list =
+      if len = 0 then [] else 
+      match suggest with
+      | [] -> []
+      | hd::tl -> hd::(truncate (len - 1) tl)
+
+      
   let print_mult_result (input_lst: string list) (tree: tree) : unit = 
     let output = (multiple_search input_lst tree) in
     let rec str_big_lst (output: string list list) : string = 
       let rec str_sm_lst (output: string list) : string = 
-        match output with
+        match (truncate display_num output) with
         | [] -> ""
         | hd::tl -> hd ^ " " ^ str_sm_lst tl in
       match output with
@@ -413,38 +318,6 @@ struct
       | [] -> t
       | hd::tl -> insert_tuplst tl (insert hd t) in
     insert_tuplst (strlst_to_tuplst (In_channel.read_lines filename) []) empty
-
-(*   let make_reader (file_name:string) : (string * float) list =
-    let opened_file = open_in file_name in
-    let list = ref [] in
-    let parse  = String.fold ~init:("","") 
-      ~f:(fun (w,d) c -> if Char.is_alpha c then (w ^ Char.escaped c, d) 
-                     else if Char.is_digit c then (w, d ^ Char.escaped c) 
-                     else (w, d)) in
-    begin
-    In_channel.iter_lines opened_file 
-      ~f:(fun x ->  let (w, p) = parse x in  list := ((w, Float.of_string p) :: !list));
-    !list; end
-
-  let load_dict (filename:string) : tree = 
-    let rec load_tup_list (lst: (string * float) list) (t:tree) : tree =
-      match lst with
-      | [] -> t
-      | hd1::hd2::tl -> 
-          (* let s = String.filter ~f:(fun c -> (c >= 'a' && c <= 'z')) hd in *)
-          load_tup_list tl (insert hd t) in
-    Printf.printf "Loading dictionary..."; flush_all ();
-    load_tup_list (make_reader filename) empty
- *)
-  (* let load_dict (filename:string) : tree = 
-    let rec load_str_list (lst: string list) (t:tree) : tree =
-      match lst with
-      | [] -> t
-      | hd::tl -> 
-          let s = String.filter ~f:(fun c -> (c >= 'a' && c <= 'z')) hd in
-          load_str_list tl (insert s t) in
-    Printf.printf "Loading dictionary..."; flush_all ();
-    load_str_list (In_channel.read_lines filename) empty *)
             
   (***********************)
   (*        Test         *)
@@ -573,7 +446,6 @@ end
 
 let _ = NaiveLevDistance.run_tests
 let _ = DynamicLevDistance.run_tests
-let _ = DamerauLevDistance.run_tests
 
 
 module BKTree = 
