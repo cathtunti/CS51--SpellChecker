@@ -1,3 +1,16 @@
+(*****************************************************************************)
+(* Author: Mick Kajornrattana Catherine Tuntiserirat Billie Wei Erika Puente *)
+(* Usage: type make to compile, type ./project.ml to run *)
+(* Description: The program has two module signatures: DISTANCE and BKTREE.  *)
+(*    The implementations DISTANCE include Levenshtein Distance written      *)
+(*    using brute-force approach, Levenshtein Distance written written using *)
+(*    dynamic programming approach and Dameraue Levenshtein Distance which   *)
+(*    the Levenshtein Distance taking into account transposition.            *)
+(*    The implementation of BKTree allows the search of a word in a          *)
+(*    dictionary possible. We include the probability of a word so that      *)
+(*    the suggested words are closer to what humans expect.                  *)
+(*****************************************************************************)
+
 open Core.Std
 open Str
 
@@ -21,7 +34,7 @@ sig
   (* True if distance (d) is within the tolerance (int), false otherwise *)
   val is_similar : int -> d -> bool
 
-  (* For BKTree, true if the two distances allow crawling on a branch of tree *)
+  (* For BKTree, true if two distances allow crawling on a branch of tree *)
   val in_range : int -> d -> d -> bool
 
   (* compare two distances if <,>,= *)
