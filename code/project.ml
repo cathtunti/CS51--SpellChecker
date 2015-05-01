@@ -454,7 +454,7 @@ module BKTree =
 
 let _ = BKTree.run_tests
 
-let dict = BKTree.load_dict "../data/dict2.txt"
+let dict = BKTree.load_dict "../data/dict.txt"
 
 try
   while true do
