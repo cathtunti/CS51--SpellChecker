@@ -4,8 +4,8 @@ import re
 def main():
 
   # open text files
-  frequency_dict = open("raw_data/frequency_dict.txt", "r")
-  normal_dict = open("raw_data/scowl_dict.txt", "r")
+  frequency_dict = open("../data/raw_data/frequency_dict.txt", "r")
+  normal_dict = open("../data/raw_data/scowl_dict.txt", "r")
 
   # store text file in arrays
   frequency_arr = frequency_dict.readlines()
@@ -32,7 +32,7 @@ def main():
       total_frequency = total_frequency + int(hash_tab[word])
 
   # write new dict file
-  output = open("cleaned_dict.txt", "w")
+  output = open("../data/cleaned_dict.txt", "w")
   for elt in both_dict:
     freq = float(elt[1]) / total_frequency
     output.write("%s\n" % elt[0])
