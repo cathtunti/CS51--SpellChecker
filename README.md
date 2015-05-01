@@ -46,9 +46,9 @@ let dict = BKTreeDynamic.load_dict "[destination of dictionary]"
     let tolerance = (String.length word) / 5 + 1 in
 ```
 
-**WARNING**:
+WARNING:
 ------------
-Adjusting tolerance level affect the search time and the number of suggested word returns.
+**Adjusting tolerance level affect the search time and the number of suggested word returns.**
 
 In general, the higher tolerance means more words are searched in the data structure and more words are considered to be "similar".
 
