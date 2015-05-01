@@ -1,4 +1,5 @@
 open Core.Std
+open Str
 
 exception ImplementMe
 
@@ -68,7 +69,7 @@ sig
      same time. *)
   val multiple_search : string list -> tree -> string list list 
 
-  (* Print out results of multiple_search in a readable format *)
+  (* Print out results of search in a readable format *)
   val print_result : string -> tree -> unit 
 
   (* Print out results of multiple_search in a readable format *)
@@ -250,10 +251,9 @@ struct
   (* Interface Functions *)
   (***********************)
   
-  (* tolerance +1 for every 3 chars *)
-  let find_tole (word: string) : int = 
-    let len = String.length word in
-    if len <= 5 then 1 else len/3   
+  (* tolerance +1 for every 5 chars *)
+  let find_tole (word: string) : int = (String.length word) / 6 + 1 
+      
 
   let search (word: string) (tree: tree) : string list = 
     let tole = find_tole word in
@@ -359,7 +359,6 @@ struct
     | Empty -> Branch (Single (D.zero, word_p))
     | Branch b -> Branch (add_to_branch word_p b)
 
-
   (* dictionary file must be in format "word\n 0.4454530e-20\n word_2\n ..." *)
   let load_dict (filename:string) : tree = 
     (* convert string list to tuple list *)
@@ -430,7 +429,33 @@ struct
         Mult(d49, w9, [Single(d9_10, w10); Single(d9_11, w11)])])));
     ()
 
-  let test_is_member () = raise ImplementMe
+  let test_is_member () =
+    let (w4, w5, w6, w7, w8, w9, w10, w11) = 
+      (("book", 0.1111), ("books",0.2222), ("boo", 0.0001), ("boon", 0.0003), 
+      ("cook", 0.3234), ("cake", 0.2342), ("cape", 0.2345), ("cart", 0.42094))
+    in
+    let d0 = D.zero in
+    let d45 = D.distance (fst w4) (fst w5) in
+    let d56 = D.distance (fst w5) (fst w6) in
+    let d67 = D.distance (fst w6) (fst w7) in
+    let d68 = D.distance (fst w6) (fst w8) in
+    let d49 = D.distance (fst w4) (fst w9) in
+    let d9_10 = D.distance (fst w9) (fst w10) in
+    let d9_11 = D.distance (fst w9) (fst w11) in
+    let t =  Branch(Mult(d0, w4, 
+      [Mult(d45, w5, [Mult(d56, w6, [Single(d67, w7); Single(d68, w8)])]); 
+        Mult(d49, w9, [Single(d9_10, w10); Single(d9_11, w11)])])) in
+    assert (is_member "book" t);
+    assert (not(is_member "bore" t));
+    assert (is_member "books" t);
+    assert (is_member "boo" t);
+    assert (is_member "boon" t);
+    assert (is_member "cook" t);
+    assert (is_member "cake" t);
+    assert (is_member "cape" t);
+    assert (is_member "cart" t);
+    assert (not(is_member "carts" t));
+    ()
   
   let test_search () = 
     let (w4, w5, w6, w7, w8, w9, w10, w11) = 
@@ -517,7 +542,7 @@ module BKTree =
 
 let _ = BKTree.run_tests
 
-let dict = BKTree.load_dict "../data/dict2.txt"
+let dict = BKTree.load_dict "../data/cleaned_dict.txt"
 
 try
   while true do
