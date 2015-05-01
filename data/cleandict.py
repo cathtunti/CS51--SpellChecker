@@ -5,7 +5,7 @@ def main():
 
   # open text files
   frequency_dict = open("raw_data/frequency_dict.txt", "r")
-  normal_dict = open("raw_data/medium_dict.txt", "r")
+  normal_dict = open("raw_data/scowl_dict.txt", "r")
 
   # store text file in arrays
   frequency_arr = frequency_dict.readlines()
@@ -21,7 +21,7 @@ def main():
     word = re.sub(r"[^A-Za-z]+", '', line)
     freq = re.sub("[^0-9]", "", line)
     hash_tab[word] = freq
-
+  
   # calculate total frequency and keep on words that are in both dictionaries
   total_frequency = 0.0
   both_dict = []

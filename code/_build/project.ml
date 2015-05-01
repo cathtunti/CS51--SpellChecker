@@ -18,16 +18,16 @@ sig
   (* Zero distance *)
   val zero : d
 
-  (* for BK to decide wheter to add a work to a return list*)
+  (* True if distance (d) is within the tolerance (int), false otherwise *)
   val is_similar : int -> d -> bool
 
-  (* for BK to decide which branch of the tree to crawl *)
+  (* For BKTree, true if the two distances allow crawling on a branch of tree *)
   val in_range : int -> d -> d -> bool
 
   (* compare two distances if <,>,= *)
   val compare : d -> d -> order
 
-  (* use probability to sort the return list from BKtree's search *)
+  (* use probability to sort the return list from BKTree's search *)
   val sort : int -> string -> (string * float) list -> string list
 
   (* Tests for functions in this module *)
@@ -36,12 +36,9 @@ sig
 end
 
 
-(* signature for BKtree *)
+(* signature for BKTree *)
 module type BKTREE =
 sig
-
-  exception EmptyTree
-  exception NodeNotFound
 
   (* type of distance *)
   type d
@@ -49,20 +46,20 @@ sig
   (* type of tree *)
   type tree
 
-  (* Returns an empty BKtree *)
+  (* Returns an empty BKTree *)
   val empty : tree
 
-  (* Take filename of a dictionary and return BKtree of the dictionary *)
+  (* Take filename of a dictionary and return BKTree of the dictionary *)
   val load_dict : string -> tree
 
-  (* Insert string into a BKtree *)
+  (* Insert string into a BKTree *)
   val insert : string * float -> tree -> tree
 
-  (* Search a BKtree for the given word. Return a list of tuples of the closest 
+  (* Search a BKTree for the given word. Return a list of tuples of the closest 
      word and the distance between them. *)
   val search : string -> tree -> string list
 
-  (* returns true if word is the BKtree, false otherwise *)
+  (* returns true if word is the BKTree, false otherwise *)
   val is_member : string -> tree -> bool
 
   (* Same as search, but take in string list to search multiple strings at the
@@ -103,8 +100,7 @@ struct
 
   let zero = 0
 
-  let is_similar (tolerance: int) (d: d) : bool =
-    d <= tolerance
+  let is_similar (tolerance: int) (d: d) : bool = d <= tolerance
 
   let in_range (tolerance: int) (d1: d) (d2: d) : bool =
     abs(d1 - d2) <= tolerance
@@ -114,37 +110,56 @@ struct
     else if d1 > d2 then Greater
     else Less
 
-  let sort (tolerance: int) (word: string) (wlst: (string * float) list) = 
-    let sort2 = 
-      let f (tuple1:string*float) (tuple2:string*float) = 
-        let k = float tolerance in
-        (* turn edit distance into prob. Look at write up for more info *)
-        let prob_of_dist d = 
-          999. *. (1000. ** (k -. float d)) /. (-1. +. 1000. ** (k +. 1.)) in
-        let val1 = prob_of_dist (distance word (fst tuple1)) *. snd tuple1 in
-        let val2 = prob_of_dist (distance word (fst tuple2)) *. snd tuple2 in
-        if val1 > val2 then -1
-        else if val2 > val1 then 1
-        else 0 in
-      List.sort ~cmp:(f) in
-    List.map ~f:(fun x -> fst x) (sort2 wlst) 
+  let sort (tolerance: int) (word: string) (wlst: (string * float) list) =
+    let sort_func (tup1: string * float) (tup2: string * float) = 
+      (* turn edit distance into probability. Look at write up for more info *)
+      let t = float tolerance in
+      let mult = 1000. in 
+      let prob_of_dist d = 
+        (mult -. 1.) *. mult ** (t -. float d) /. (-1. +. mult ** (t +. 1.)) in
+      (* probability of a suggested word is intended, given 'word' is typed *)
+      let prob1 = prob_of_dist (distance word (fst tup1)) *. snd tup1 in
+      let prob2 = prob_of_dist (distance word (fst tup2)) *. snd tup2 in
+      if prob1 = prob2 then 0
+      else if prob2 > prob1 then 1
+      else -1 in
+    List.map ~f:(fun x -> fst x) (List.sort ~cmp:(sort_func) wlst) 
 
-  let run_tests =
+  let distance_tests () = 
     assert((distance "" "") = 0);
     assert((distance "a" "b") = 1);
     assert((distance "ab" "ba") = 2);
     assert((distance "cat" "tac") = 2);
     assert((distance "cool" "school") = 2);
-    assert((distance "bottom" "button" = 2))
+    assert((distance "bottom" "button" = 2));
     assert((distance "evidence" "providence") = 3);
     assert((distance "evidence" "provident") = 5);
     assert((distance "evidence" "provoident") = 6);
     assert((distance "Levenshtein" "Levenstein") = 1);
-    assert((distance "transposition" "transpostion" = 1));
+    assert((distance "transposition" "transposition" = 0));
+    assert((distance "rtansposition" "transposition" = 2));
+    assert((distance "rtnasposition" "transposition" = 3));
+    assert((distance "rtnasposiiton" "transposition" = 5));
+    ()
+
+  let sort_tests () = 
+    assert((sort 0 "" []) = []);
+    assert((sort 0 "" [("cook",0.2)]) = ["cook"]);
+    assert((sort 0 "book" [("book",0.);("asfdasf",1.)]) = ["asfdasf";"book"]);
+    assert((sort 2 "compiler" [("composer",1.3e-05);("compiler",1.3e-05);
+           ("compilers",2.8e-06)]) = ["compiler";"compilers";"composer"]);
+    ()
+
+  let run_tests =
+    distance_tests ();
+    sort_tests ();
     ()
 
 end
 
+
+(* implementation for Levenshtein Disance with dynamic programming approach 
+   using Wagner-Fischer matrix algorithm *)
 module DynamicLevDistance : DISTANCE with type d=int = 
 struct
 
@@ -174,7 +189,7 @@ struct
 end
 
 (* WARNING *)
-(* Damerau CANNOT BE USED WITH BK-TREE (structurally) look at writeup *)
+(* Damerau CANNOT BE USED WITH BK-TREE (structurally). please see writeup *)
 module DamerauLevDistance : DISTANCE with type d=int = 
 struct
 
@@ -205,19 +220,49 @@ struct
     else get_distance 1 1 (Array.create ~len:(len2 + 1) ~-1) (Array.init 
       (len2 + 1) ~f:(fun i -> i))  (Array.create ~len:(len2 + 1) 1)
 
+  (* Need to change the tests to take into account transposed characters *)
+  let distance_tests () = 
+    assert((distance "" "") = 0);
+    assert((distance "a" "b") = 1);
+    assert((distance "ab" "ba") = 1);
+    assert((distance "cat" "tac") = 2);
+    assert((distance "cool" "school") = 2);
+    assert((distance "bottom" "button" = 2));
+    assert((distance "evidence" "providence") = 3);
+    assert((distance "evidence" "provident") = 5);
+    assert((distance "evidence" "provoident") = 6);
+    assert((distance "Levenshtein" "Levenstein") = 1);
+    assert((distance "transposition" "transposition" = 0));
+    assert((distance "rtansposition" "transposition" = 1));
+    assert((distance "rtnasposition" "transposition" = 2));
+    assert((distance "rtnasposiiton" "transposition" = 3));
+    ()
+
+  let sort_tests () = 
+    assert((sort 0 "" []) = []);
+    assert((sort 0 "" [("cook",0.2)]) = ["cook"]);
+    assert((sort 0 "book" [("book",0.);("asfdasf",1.)]) = ["asfdasf";"book"]);
+    assert((sort 2 "compiler" [("composer",1.3e-05);("compiler",1.3e-05);
+           ("compilers",2.8e-06)]) = ["compiler";"compilers";"composer"]);
+    ()
+
+  let run_tests =
+    distance_tests ();
+    sort_tests ();
+    ()
+
 end
 
 (*****************************)
 (** BKTree with Probability **)
 (*****************************)
 
-(* implementation for BKtree *)
-module BKtree_prob(D:DISTANCE) : BKTREE with type d=D.d =
+(* implementation for BKTree *)
+module BKTree(D:DISTANCE) : BKTREE with type d=D.d =
 struct
 
-  exception EmptyTree
-  exception NodeNotFound
   exception InvalidFile
+  exception EmptyTree
 
   type d = D.d
   
@@ -227,12 +272,11 @@ struct
   
   type tree = Empty | Branch of branch
 
-  (* Returns an empty BKtree *)
+  (* Returns an empty BKTree *)
   let empty = Empty
 
   (* the max number of suggested words return to user *)
   let display_num = 10
-
 
   (********************)
   (* Helper Functions *)
@@ -243,51 +287,38 @@ struct
     match branch with
     | Single (d,_) | Mult (d,_,_) -> d
 
-  (* to truncate the return list to a given length *) 
-  let rec truncate (len: int) (suggest: string list) : string list =
-    if len = 0 then [] else 
-    match suggest with
-    | [] -> []
-    | hd::tl -> hd::(truncate (len - 1) tl)
-
-
-  (***********************)
-  (* Interface Functions *)
-  (***********************)
+  (*************************)
+  (* Functions in Signatur *)
+  (*************************)
   
-  (* tolerance +1 for every 5 chars *)
-  let find_tole (word: string) : int = (String.length word) / 6 + 1 
-      
-
   let search (word: string) (tree: tree) : string list = 
-    let tole = find_tole word in
+    (* tolerance +1 for every 5 chars *)
+    let tolerance = (String.length word) / 5 + 1 in
     (* traverse through branch *)
     let rec search_br (word: string) (br: branch) : (string * float) list = 
       (* traverse through other branches connected to Mult *)
-      let rec search_br_lst (word: string) (d_ori: d) (b_lst: branch list) 
+      let rec search_br_lst (word: string) (d: d) (b_lst: branch list) 
         (return_lst: (string * float) list ) : (string * float) list =
         match b_lst with
         | [] -> return_lst
         | hd::tl -> 
-            (* search branch if within tole. range before moving to nxt child *)
-            if (D.in_range tole d_ori (extract_d hd)) 
-            then search_br word hd  @ (search_br_lst word d_ori tl return_lst)
-            else (search_br_lst word d_ori tl return_lst) 
-        in
+            (* search if branch is within tolerance range before moving to
+               the next child *)
+            if (D.in_range tolerance d (extract_d hd)) then 
+              search_br word hd  @ (search_br_lst word d tl return_lst)
+            else (search_br_lst word d tl return_lst) in
       match br with
       | Single (_, (w,p)) -> 
           (* if similar enough then add to return list *)
-          if D.is_similar tole (D.distance word w) then [(w,p)]
-          else []
+          if D.is_similar tolerance (D.distance word w) then [(w,p)] else []
       | Mult (_, (w,p), b_lst) -> 
           (* if similar enough, add to return list and search its children *)
-          if D.is_similar tole (D.distance word w) 
-          then (search_br_lst word (D.distance w word) b_lst [(w,p)]) 
-          else (search_br_lst word (D.distance w word) b_lst [])
-    in
+          if D.is_similar tolerance (D.distance word w) then 
+            (search_br_lst word (D.distance w word) b_lst [(w,p)]) 
+          else (search_br_lst word (D.distance w word) b_lst []) in
     match tree with
     | Empty -> [] 
-    | Branch b -> D.sort tole word (search_br word b)
+    | Branch b -> D.sort tolerance word (search_br word b)
 
 
   let is_member (word: string) (tree: tree) : bool = 
@@ -305,16 +336,23 @@ struct
     | Branch b -> search_br word b
 
 
-  let rec multiple_search (w_lst: string list) (tree: tree) : string list list = 
+  let rec multiple_search (w_lst: string list) (t:tree) : string list list =
     match w_lst with
     | [] -> []
-    | hd::tl -> (search hd tree) :: (multiple_search tl tree)
+    | hd::tl -> (search hd t) :: (multiple_search tl t)
 
       
   let print_mult_result (input_lst: string list) (tree: tree) : unit = 
     let output = (multiple_search input_lst tree) in
     (* parse a return list of each input word *)
     let rec str_big_lst (output: string list list) : string = 
+      (* truncate the return list to a given length *) 
+      let rec truncate (len: int) (suggest: string list) : string list =
+        if len = 0 then [] 
+        else 
+          match suggest with
+          | [] -> []
+          | hd::tl -> hd::(truncate (len - 1) tl) in
       (* parse each return word in a return list *)
       let rec str_sm_lst (output: string list) : string = 
         match (truncate display_num output) with
@@ -323,7 +361,9 @@ struct
       match output with
       | [] -> ""
       | hd::tl -> str_sm_lst hd ^ "\n" ^ str_big_lst tl in
-    print_string (str_big_lst output); (flush_all ())
+    let out_string = str_big_lst output in
+    if out_string = "\n" then (print_string "NO MATCH FOUND.\n"; flush_all ())
+    else (print_string out_string; flush_all ())
 
   
   let print_result (input: string) (tree: tree) : unit =
@@ -357,11 +397,11 @@ struct
       | Mult (d, (s, p), b_lst) -> 
           if (s = w) then br 
           (* traverse through Mult children to insert at the right place *)
-          else Mult (d, (s, p), (inject_to_lst word_p (D.distance s w) b_lst)) 
-      in
+          else Mult (d,(s,p),(inject_to_lst word_p (D.distance s w) b_lst)) in
     match tree with
     | Empty -> Branch (Single (D.zero, word_p))
     | Branch b -> Branch (add_to_branch word_p b)
+
 
   (* dictionary file must be in format "word\n 0.4454530e-20\n word_2\n ..." *)
   let load_dict (filename:string) : tree = 
@@ -378,12 +418,44 @@ struct
       | [] -> t
       | hd::tl -> insert_tuplst tl (insert hd t) in
     insert_tuplst (strlst_to_tuplst (In_channel.read_lines filename) []) empty
-            
+         
+
+
   (***********************)
   (*        Test         *)
   (***********************)
+
+  (* tuples of word and float for testing*)
+  let (w1,w2,w3,w4,w5,w6,w7,w8,w9,w10,w11,w12, w13, w14, w15) = 
+    (("book",0.1111),("books",0.2222),("boo",0.3333),("book",0.1111),
+      ("books",0.2222),("boo",0.0001),("boon",0.0003),("cook",0.3234),
+      ("cake",0.2342),("cape",0.2345),("cart",0.42094),("pool",0.0002), 
+      ("food",0.2333),("form",0.22222),("pearl",0.23421)) 
+
+  (* trees and branch for testing *)
+  let (test_tree1, test_tree2, test_branch3) =
+    let d0 = D.zero in
+    let d45 = D.distance (fst w4) (fst w5) in
+    let d56 = D.distance (fst w5) (fst w6) in
+    let d67 = D.distance (fst w6) (fst w7) in
+    let d68 = D.distance (fst w6) (fst w8) in
+    let d49 = D.distance (fst w4) (fst w9) in
+    let d9_10 = D.distance (fst w9) (fst w10) in
+    let d9_11 = D.distance (fst w9) (fst w11) in
+    let d4_12 = D.distance (fst w4) (fst w12) in
+    let d12_13 = D.distance (fst w12) (fst w13) in
+    let d12_15 = D.distance (fst w12) (fst w15) in
+    let d13_14 = D.distance (fst w13) (fst w14) in
+    (Branch(Mult(d0, w4, [Mult(d45, w5, [Mult(d56, w6, [Single(d67, w7); 
+            Single(d68, w8)])]); Mult(d49, w9, [Single(d9_10, w10); 
+            Single(d9_11, w11)])])), 
+     Branch(Mult(d0, w4, [Mult(d45, w5, [Mult(d56, w6, [Single(d67, w7); 
+            Single(d68, w8)])]); Mult(d49, w9, [Single(d9_10, w10); 
+            Single(d9_11, w11)]); Mult(d4_12, w12, [Mult(d12_13, w13, 
+            [Single(d13_14, w14)]); Single(d12_15, w15)])])), 
+     Single(d9_11, w11))
+
   let test_insert () = 
-    let (w1, w2, w3) = (("book", 0.1111), ("books", 0.2222), ("boo", 0.3333)) in
     let t = insert w1 empty in
     let d0 = D.zero in
     assert (t = Branch(Single(d0, w1)));
@@ -393,11 +465,6 @@ struct
     let t = insert  w3 t in
     let d23 = D.distance  (fst w2)  (fst w3) in 
     assert (t = Branch(Mult(d0, w1, [Mult(d12, w2, [Single(d23, w3)])])));
-    
-    let (w4, w5, w6, w7, w8, w9, w10, w11) = 
-      (("book", 0.1111), ("books", 0.2222), ("boo", 0.0001), ("boon", 0.0003), 
-      ("cook", 0.3234), ("cake", 0.2342), ("cape", 0.2345), ("cart", 0.42094)) 
-    in
     let t = insert  w4 empty in
     let d0 = D.zero in
     assert (t = Branch(Single(d0, w4)));
@@ -426,105 +493,41 @@ struct
       [Mult(d45, w5, [Mult(d56, w6, [Single(d67, w7); Single(d68, w8)])]);
         Mult(d49, w9, [Single(d9_10, w10)])])));
     let t = insert w11 t in
-    let d9_11 = D.distance (fst w9) (fst w11) in
-    assert (t = Branch(Mult(d0, w4, 
-      [Mult(d45, w5, [Mult(d56, w6, [Single(d67, w7); Single(d68, w8)])]); 
-        Mult(d49, w9, [Single(d9_10, w10); Single(d9_11, w11)])])));
+    assert (t = test_tree1);
     ()
 
   let test_is_member () =
-    let (w4, w5, w6, w7, w8, w9, w10, w11) = 
-      (("book", 0.1111), ("books",0.2222), ("boo", 0.0001), ("boon", 0.0003), 
-      ("cook", 0.3234), ("cake", 0.2342), ("cape", 0.2345), ("cart", 0.42094))
-    in
-    let d0 = D.zero in
-    let d45 = D.distance (fst w4) (fst w5) in
-    let d56 = D.distance (fst w5) (fst w6) in
-    let d67 = D.distance (fst w6) (fst w7) in
-    let d68 = D.distance (fst w6) (fst w8) in
-    let d49 = D.distance (fst w4) (fst w9) in
-    let d9_10 = D.distance (fst w9) (fst w10) in
-    let d9_11 = D.distance (fst w9) (fst w11) in
-    let t =  Branch(Mult(d0, w4, 
-      [Mult(d45, w5, [Mult(d56, w6, [Single(d67, w7); Single(d68, w8)])]); 
-        Mult(d49, w9, [Single(d9_10, w10); Single(d9_11, w11)])])) in
-    assert (is_member "book" t);
-    assert (not(is_member "bore" t));
-    assert (is_member "books" t);
-    assert (is_member "boo" t);
-    assert (is_member "boon" t);
-    assert (is_member "cook" t);
-    assert (is_member "cake" t);
-    assert (is_member "cape" t);
-    assert (is_member "cart" t);
-    assert (not(is_member "carts" t));
+    assert (is_member "book" test_tree1);
+    assert (not(is_member "bore" test_tree1));
+    assert (is_member "books" test_tree1);
+    assert (is_member "boo" test_tree1);
+    assert (is_member "boon" test_tree1);
+    assert (is_member "cook" test_tree1);
+    assert (is_member "cake" test_tree1);
+    assert (is_member "cape" test_tree1);
+    assert (is_member "cart" test_tree1);
+    assert (not(is_member "carts" test_tree1));
     ()
   
   let test_search () = 
-    let (w4, w5, w6, w7, w8, w9, w10, w11) = 
-      (("book", 0.1111), ("books",0.2222), ("boo", 0.0001), ("boon", 0.0003), 
-      ("cook", 0.3234), ("cake", 0.2342), ("cape", 0.2345), ("cart", 0.42094)) 
-    in
-    let d0 = D.zero in
-    let d45 = D.distance (fst w4) (fst w5) in
-    let d56 = D.distance (fst w5) (fst w6) in
-    let d67 = D.distance (fst w6) (fst w7) in
-    let d68 = D.distance (fst w6) (fst w8) in
-    let d49 = D.distance (fst w4) (fst w9) in
-    let d9_10 = D.distance (fst w9) (fst w10) in
-    let d9_11 = D.distance (fst w9) (fst w11) in
-    let t =  Branch(Mult(d0, w4, 
-      [Mult(d45, w5, [Mult(d56, w6, [Single(d67, w7); Single(d68, w8)])]); 
-        Mult(d49, w9, [Single(d9_10, w10); Single(d9_11, w11)])])) in
-    let (s1, s2, s3, s4, s5) = 
-      ("caqe", "boop", "care", "supercalifragilisticexpialidocious", "barn") in
-    assert (search s1 t = ["cape"; "cake"]);
-    assert (search s2 t = ["boon"; "boo"; "book"]);
-    assert (search s3 t = ["cape"; "cake"]);
-    assert (search s4 t = []);
-    assert (search s5 t = []);
-    
-    let (w12, w13, w14, w15) = (("pool", 0.0002), ("food", 0.2333),
-      ("form", 0.22222), ("pearl", 0.23421)) in
-    let s6 = "form" in
-    let d4_12 = D.distance (fst w4) (fst w12) in
-    let d12_13 = D.distance (fst w12) (fst w13) in
-    let d12_15 = D.distance (fst w12) (fst w15) in
-    let d13_14 = D.distance (fst w13) (fst w14) in
-    let t = Branch(Mult(d0, w4, 
-      [Mult(d45, w5, [Mult(d56, w6, [Single(d67, w7); Single(d68, w8)])]); 
-        Mult(d49, w9, [Single(d9_10, w10); Single(d9_11, w11)]);
-          Mult(d4_12, w12, [Mult(d12_13, w13, 
-            [Single(d13_14, w14)]); Single(d12_15, w15)])])) in
-    assert (search s6 t = ["form"]);
+    let (s1, s2, s3, s4, s5, s6) = 
+      ("caqe", "boop", "care", "supercalifragilisticexs", "barn", "form") in
+    assert (search s1 test_tree1 = ["cape"; "cake"]);
+    assert (search s2 test_tree1 = ["boon"; "boo"; "book"]);
+    assert (search s3 test_tree1 = ["cape"; "cake"]);
+    assert (search s4 test_tree1 = []);
+    assert (search s5 test_tree1 = []);
+    assert (search s6 test_tree2 = ["form"]);
     ()
     
-(*   let test_same_word () =
-    assert (same_word "moo" "moo" = true);
-    assert (same_word "root" "moo" = false);
-    assert (same_word "123" "moo" = false);
-    assert (same_word "123" "123" = true);
-    () *)
-    
-  let test_extract_d () =
-    let (w4, w5, w6, w7, w8, w9, w10, w11) = 
-      (("book", 0.1111), ("books",0.2222), ("boo", 0.0001), ("boon", 0.0003), 
-      ("cook", 0.3234), ("cake", 0.2342), ("cape", 0.2345), ("cart", 0.42094)) 
-    in
-    let d0 = D.zero in
-    let d45 = D.distance (fst w4) (fst w5) in
-    let d56 = D.distance (fst w5) (fst w6) in
-    let d67 = D.distance (fst w6) (fst w7) in
-    let d68 = D.distance (fst w6) (fst w8) in
-    let d49 = D.distance (fst w4) (fst w9) in
-    let d9_10 = D.distance (fst w9) (fst w10) in
-    let d9_11 = D.distance (fst w9) (fst w11) in
-    let t = Mult(d0, w4, 
-      [Mult(d45, w5, [Mult(d56, w6, [Single(d67, w7); Single(d68, w8)])]); 
-        Mult(d49, w9, [Single(d9_10, w10); Single(d9_11, w11)])]) in
-    let t2 = Single(d9_11, w11) in
-    assert (extract_d t = d0);
-    assert (extract_d t2 = d9_11);
+  let test_extract_d () = 
+    let test_branch1 = 
+      match test_tree1 with
+      | Branch(br) -> br
+      | _ -> raise EmptyTree in
+    assert (extract_d test_branch1 = D.zero);
+    assert (extract_d test_branch3 = D.distance (fst ("cake",0.2342)) 
+                                      (fst ("cart",0.42094)));
     ()
 
   let run_tests () = 
@@ -536,46 +539,60 @@ struct
 
 end
 
-let _ = NaiveLevDistance.run_tests
+(* run tests for Distance modules *)
 let _ = DynamicLevDistance.run_tests
+let _ = NaiveLevDistance.run_tests
 
+
+(* Initialize BKTree modules *)
+module BKTreeDynamic = 
+  (BKTree(DynamicLevDistance) : BKTREE with type d = NaiveLevDistance.d)
 
 module BKTreeNaive = 
-  (BKtree_prob(NaiveLevDistance) : BKTREE with type d = DynamicLevDistance.d)
+  (BKTree(NaiveLevDistance) : BKTREE with type d = DynamicLevDistance.d)
 
-module BKTreeDynamic = 
-  (BKtree_prob(DynamicLevDistance) : BKTREE with type d = NaiveLevDistance.d)
 
-let _ = BKTreeNaive.run_tests
+(* run tests for BKTree modules *)
 let _ = BKTreeDynamic.run_tests
+let _ = BKTreeNaive.run_tests
 
-let _ = 
-  print_string "\nRuntimes for loading 500-word dictionary\n";
-  flush_all ();
-  ()
 
+(* The comparison runtime test for NaiveLevDistance and DynamicLevDistance *)
 let _ =
-  let _ = print_string "  Non-Dynamic Levenshtein Distance takes " in 
+  print_string "\nRuntimes for loading 500-word dictionary\n";
+  print_string "  Dynamic Levenshtein Distance takes ";
+  flush_all ();
   let start = Unix.gettimeofday () in 
-  let _ = BKTreeNaive.load_dict "../data/test_dict.txt" in
+  let _ = BKTreeDynamic.load_dict "../data/test_dict.txt" in
   let stop = Unix.gettimeofday () in
   print_float (stop -. start); print_string " seconds\n"; 
   flush_all ()
 
 let _ =
-  let _ = print_string "  Dynamic Levenshtein Distance takes " in
+   print_string "  Non-Dynamic Levenshtein Distance takes ";
+  flush_all ();
   let start = Unix.gettimeofday () in 
-  let _ = BKTreeDynamic.load_dict "../data/test_dict.txt" in
+  let _ = BKTreeNaive.load_dict "../data/test_dict.txt" in
   let stop = Unix.gettimeofday () in
   print_float (stop -. start); print_string " seconds\n\n"; 
   flush_all ()
 
+
+(* Load the real dictionary *)
 let _ = 
   print_string "Loading 100,000-word dictionary, please wait..."; 
   flush_all ()
 let dict = BKTreeDynamic.load_dict "../data/cleaned_dict.txt"
 
 
+(* uncomment to show some sample results 
+let _ =
+  print_string "\n\nSuggested words for 'hadvark' 'neccesssry' 'asent'\n";
+  BKTreeDynamic.print_mult_result ["hadvark"; "neccesssry"; "asent"] dict
+*)
+
+
+(* Keep asking for an input from a user *)
 try
   while true do
     print_string "\nInput: "; flush_all ();
@@ -585,11 +602,3 @@ try
   None
 with
   End_of_file -> None
-;;
-
-
-
-
-
-
-
