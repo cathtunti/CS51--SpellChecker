@@ -31,7 +31,7 @@ sig
   val sort : int -> string -> (string * float) list -> string list
 
   (* Tests for functions in this module *)
-  val run_tests : unit 
+  val run_tests : unit
 
 end
 
@@ -77,6 +77,7 @@ sig
 
   (* Tests for functions in this module *)
   val run_tests : unit -> unit
+
 
 end
 
@@ -129,14 +130,17 @@ struct
     List.map ~f:(fun x -> fst x) (sort2 wlst) 
 
   let run_tests =
+    assert((distance "" "") = 0);
+    assert((distance "a" "b") = 1);
+    assert((distance "ab" "ba") = 2);
+    assert((distance "cat" "tac") = 2);
+    assert((distance "cool" "school") = 2);
+    assert((distance "bottom" "button" = 2))
     assert((distance "evidence" "providence") = 3);
     assert((distance "evidence" "provident") = 5);
     assert((distance "evidence" "provoident") = 6);
-    assert((distance "cook" "snook") = 2);
-    assert((distance "" "") = 0);
-    assert((distance "CS51" "CS51") = 0);
-    assert((distance "cool" "Cool") = 0);
-    assert((distance "cook" "cok") = 1);
+    assert((distance "Levenshtein" "Levenstein") = 1);
+    assert((distance "transposition" "transpostion" = 1));
     ()
 
 end
@@ -373,7 +377,6 @@ struct
       match tuplst with
       | [] -> t
       | hd::tl -> insert_tuplst tl (insert hd t) in
-    print_string "Loading dictionary, please wait..."; flush_all ();
     insert_tuplst (strlst_to_tuplst (In_channel.read_lines filename) []) empty
             
   (***********************)
@@ -537,18 +540,47 @@ let _ = NaiveLevDistance.run_tests
 let _ = DynamicLevDistance.run_tests
 
 
-module BKTree = 
-  (BKtree_prob(DynamicLevDistance) : BKTREE with type d = DynamicLevDistance.d)
+module BKTreeNaive = 
+  (BKtree_prob(NaiveLevDistance) : BKTREE with type d = DynamicLevDistance.d)
 
-let _ = BKTree.run_tests
+module BKTreeDynamic = 
+  (BKtree_prob(DynamicLevDistance) : BKTREE with type d = NaiveLevDistance.d)
 
-let dict = BKTree.load_dict "../data/cleaned_dict.txt"
+let _ = BKTreeNaive.run_tests
+let _ = BKTreeDynamic.run_tests
+
+let _ = 
+  print_string "\nRuntimes for loading 500-word dictionary\n";
+  flush_all ();
+  ()
+
+let _ =
+  let _ = print_string "  Non-Dynamic Levenshtein Distance takes " in 
+  let start = Unix.gettimeofday () in 
+  let _ = BKTreeNaive.load_dict "../data/test_dict.txt" in
+  let stop = Unix.gettimeofday () in
+  print_float (stop -. start); print_string " seconds\n"; 
+  flush_all ()
+
+let _ =
+  let _ = print_string "  Dynamic Levenshtein Distance takes " in
+  let start = Unix.gettimeofday () in 
+  let _ = BKTreeDynamic.load_dict "../data/test_dict.txt" in
+  let stop = Unix.gettimeofday () in
+  print_float (stop -. start); print_string " seconds\n\n"; 
+  flush_all ()
+
+let _ = 
+  print_string "Loading 100,000-word dictionary, please wait..."; 
+  flush_all ()
+let dict = BKTreeDynamic.load_dict "../data/cleaned_dict.txt"
+
 
 try
   while true do
     print_string "\nInput: "; flush_all ();
     let word = input_line stdin in
-    BKTree.print_result word dict
+    BKTreeDynamic.print_result word dict
     done;
   None
 with
